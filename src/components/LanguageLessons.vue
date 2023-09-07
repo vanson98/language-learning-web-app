@@ -1,6 +1,6 @@
 <template>
-  <div>Xin chao Son den voi view</div>
-  <button @click="count++">You clicked me {{ count }} times :#.</button>
+  <div>Input content</div>
+  <button>Import</button>
   <el-input
     v-model="lessonContent"
     :autosize="{ minRows: 2, maxRows: 4 }"
@@ -12,7 +12,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { ElInput } from "element-plus";
-import { axios} from "axios";
 const lessonContent = ref("");
 
 const count = ref(0);
