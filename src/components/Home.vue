@@ -5,10 +5,21 @@
   <input type="text" v-model="subject.LanguageId">
   <br>
   <input type="text" v-model="subject.UserId">
+
+
 </template>
 <script lang="ts" setup>
 import axios from 'axios';
 import Subject from '@/entities/Subject'
+import { onMounted } from 'vue';
+
+
+onMounted(()=>{
+  axios.post('http://localhost:3333/').then(response => {
+    console.log(response);
+  })
+
+})
 
 var subject: Subject = {
   Name: "",
@@ -17,6 +28,8 @@ var subject: Subject = {
 }
 
 function addNewSubject(){
-  axios.post('localhost:3333/add-subject', subject).then(response => console.log(response))
+  axios.post('http://localhost:3333/add-subject', subject).then(response => console.log(response))
 }
+
+
 </script>
