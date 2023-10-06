@@ -4,15 +4,18 @@
         <el-menu-item index="/vocabs">Vocab</el-menu-item>
         <el-menu-item index="/import-lesson">Import Lesson</el-menu-item>
         
-        <el-select v-model="selectedLanguageId" placeholder="Select Language" class="lang-selector-ctn">
+        <el-select v-model="selectedLanguageId" 
+        placeholder="Select Language" 
+        class="lang-selector-ctn"
+        @change="onSelectedLanguageChange">
             <el-option v-for="item in languages" :key="item.id" :label="item.name" :value="item.id"></el-option>
         </el-select>
         
     </el-menu>
 </template>
 <script setup lang="ts">
-import Language from "@/entities/Language"
-import axios from "axios";
+import ajax from "@/libs/ajax";
+import Language from "@/models/language/Language"
 import { ElMenu, ElMenuItem, ElOption, ElSelect, ElButton } from "element-plus";
 import { onMounted, ref } from "vue";
 
@@ -23,16 +26,20 @@ const selectedLanguageId = ref('')
 
 
 onMounted(() => {
-    axios.post('http://localhost:3333/get-languages').then(response => {
-        languages.value = response.data as Language[]
-
-        console.log(languages.value)
+    ajax.get('/get-languages').then(response => {
+        if(response.data != null){
+            languages.value = response.data as Language[]
+            selectedLanguageId.value = languages.value[0].id
+            localStorage.setItem("languageId",selectedLanguageId.value)
+        }
     }).catch(() => {
         console.log("error")
     })
 })
 
-
+const onSelectedLanguageChange = ()=>{
+    localStorage.setItem("languageId",selectedLanguageId.value)
+}
 </script>
 
 <style>
