@@ -26,7 +26,7 @@ const selectedLanguageId = ref('')
 
 
 onMounted(() => {
-    ajax.get('/get-languages').then(response => {
+    ajax.get('/languages').then(response => {
         if(response.data != null){
             languages.value = response.data as Language[]
             selectedLanguageId.value = languages.value[0].id

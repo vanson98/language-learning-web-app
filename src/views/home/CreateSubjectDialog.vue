@@ -3,13 +3,13 @@
         :model-value="isOpen"
         title="Create Subject"
         width="20%"
-        :before-close="handleClose"
+        :before-close="() => handleClose(false)"
     >
         <el-input v-model:model-value="subjectName"></el-input>
         <p>{{ subjectName }}</p>
         <template #footer>
             <span class="dialog-footer">
-                <el-button @click="handleClose">Cancel</el-button>
+                <el-button @click="() => handleClose(false)">Cancel</el-button>
                 <el-button type="primary" @click="addNewSubject">
                     Save
                 </el-button>
@@ -41,12 +41,13 @@ function addNewSubject() {
     var languageId = localStorage.getItem("languageId")
     if(userId != null && languageId != null && subjectName != null){
         var subject : Subject = {
-            Name: subjectName.value,
-            LanguageId: languageId,
-            UserId: userId
+            id: null,
+            name: subjectName.value,
+            languageId: languageId,
+            userId: userId
         }
         ajax.post('/add-subject', JSON.stringify(subject)).then(response => {
-            handleClose()
+            handleClose(true)
         })
     }else{
         alert("Please check info again")
@@ -55,8 +56,8 @@ function addNewSubject() {
 }
 
 
-const handleClose = () => {
-    emits("onCloseDialog")
+const handleClose = (createSuccess : boolean) => {
+    emits("onCloseDialog",createSuccess)
 }
 
 </script>

@@ -1,5 +1,6 @@
 export default interface Subject{
-    Name : string;
-    UserId: string;
-    LanguageId: string;
+    id  : string | null;
+    name : string;
+    userId: string;
+    languageId: string;
 }

@@ -10,9 +10,10 @@ const ajax = axios.create({
 ajax.interceptors.response.use(response =>{
   return response
 },error =>{
+  debugger
   var bypassAuthenPath = ["/login","/refresh-token"]
 
-  if(error.response.status == 401 && !bypassAuthenPath.includes(error.config.url)){
+  if(error.response != null && error.response.status == 401 && !bypassAuthenPath.includes(error.config.url)){
     requestNewToken()
   }
   else{
