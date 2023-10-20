@@ -1,10 +1,13 @@
 <template>
   <el-button type="primary" class="add-subject-btn" @click="openSubjectCreatedDialog">Add Subject</el-button>
   <el-button type="primary" @click="lessonDialogVisible = true">Create Lesson</el-button>
-  <div>
-    <ul>
-      <li v-for="subject in subjects" :key="(subject.id as string)">{{ subject.name }}</li>
-    </ul>
+  <div class="d-flex justify-content-center">
+    <div class="list-unstyled">
+      <li v-for="subject in subjects" :key="(subject.id as string)">
+        <router-link :to="{name: 'lessons', params: {subjectId: subject.id}}" >{{ subject.name }}</router-link>
+      </li>
+    </div>
+    
   </div>
   <CreateSubjectDialog :is-open="subjectDialogVisible" @on-close-dialog="closeSubjectDialog"></CreateSubjectDialog>
   <CreateLessonDialog 
@@ -35,14 +38,9 @@ onMounted(() => {
 })
 
 const getAllSubjects = () => {
-  ajax.get("/subjects", {
-    params: {
-      uid: localStorage.getItem("userId"),
-      langid: localStorage.getItem("languageId")
-    }
+  ajax.get("/deck", {
+    
   }).then(response => {
-    subjects.value = response.data
-    console.log(subjects.value)
   })
 }
 

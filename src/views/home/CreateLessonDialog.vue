@@ -57,8 +57,7 @@ onMounted(()=>{
 })
 
 const submitForm = () =>{
-    debugger
-    ajax.post("/lessons",JSON.stringify(lessonModel.value)).then(res=>{
+    ajax.post("/lesson",JSON.stringify(lessonModel.value)).then(res=>{
         console.log(res)
         lessonModel.value = {
             name : "",
