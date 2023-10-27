@@ -1,64 +1,38 @@
 <template>
-  <el-button type="primary" class="add-subject-btn" @click="openSubjectCreatedDialog">Add Subject</el-button>
-  <el-button type="primary" @click="lessonDialogVisible = true">Create Lesson</el-button>
-  <div class="d-flex justify-content-center">
-    <div class="list-unstyled">
-      <li v-for="subject in subjects" :key="(subject.id as string)">
-        <router-link :to="{name: 'lessons', params: {subjectId: subject.id}}" >{{ subject.name }}</router-link>
-      </li>
-    </div>
+  <el-row :gutter="20">
+    <el-col :span="6">
+      <el-input v-model:model-value="noteId" placeholder="Please input Note Id"></el-input>
+    </el-col>
+    <el-col :span="6">
+      <el-button type="primary"  @click="getNote">Get Lesson</el-button>
+    </el-col>
+    <el-col :span="6">
+      <el-input v-model="searchPhrase"></el-input>
+    </el-col>
+    <el-col :span="6">
+      <el-button type="primary">Search Phrase</el-button>
+    </el-col>
     
+  </el-row>
+  <div>
+     <h4 v-html="lessonName"></h4>
   </div>
-  <CreateSubjectDialog :is-open="subjectDialogVisible" @on-close-dialog="closeSubjectDialog"></CreateSubjectDialog>
-  <CreateLessonDialog 
-    :is-open="lessonDialogVisible" 
-    @on-close="closeLessonDialog"
-    :subjects="subjects"
-    >
-  </CreateLessonDialog>
 </template>
 
 <script lang="ts" setup>
-import axios from 'axios';
-import { onMounted, ref } from 'vue';
-import Subject from "../../models/subject/Subject"
-import { ElButton } from 'element-plus';
-import CreateSubjectDialog from './CreateSubjectDialog.vue';
-import CreateLessonDialog from './CreateLessonDialog.vue'
+
+import { ref } from 'vue';
+import { ElButton, ElCol, ElInput, ElRow } from 'element-plus';
 import ajax from '@/libs/ajax';
+const noteId = ref<number>(1695944403453)
+const lessonName = ref<string>();
+const searchPhrase = ref<string>();
 
-
-var subjects = ref<Subject[]>([])
-
-const subjectDialogVisible = ref(false)
-const lessonDialogVisible = ref(false)
-
-onMounted(() => {
-  getAllSubjects()
-})
-
-const getAllSubjects = () => {
-  ajax.get("/deck", {
-    
-  }).then(response => {
+const getNote = () => {
+  ajax.get("/note?id="+noteId.value).then(response => {
+    lessonName.value = response.data.result[0].fields["Lesson Name"].value 
   })
 }
-
-const openSubjectCreatedDialog = () => {
-  subjectDialogVisible.value = true
-}
-
-const closeSubjectDialog = (isSuccess: boolean) => {
-  if (isSuccess) {
-    getAllSubjects();
-  }
-  subjectDialogVisible.value = false;
-}
-
-const closeLessonDialog = (isSuccess: boolean) => {
-  lessonDialogVisible.value = false;
-}
-
 
 </script>
   

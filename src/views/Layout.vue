@@ -1,9 +1,7 @@
 <template>
   <div>
     <el-container>
-      <el-header>
-        <menu-component></menu-component>
-      </el-header>
+     
       <el-main>
         <div>
           <router-view />
