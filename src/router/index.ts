@@ -20,16 +20,6 @@ const routes: Array<RouteRecordRaw> = [
                 path: "/home",
                 name: "home",
                 component: () => import("../views/home/Home.vue")
-            },
-            {
-                path: "/lessons/:subjectId",
-                name: "lessons",
-                component: () => import("../views/lesson/Lessons.vue")
-            },
-            {
-                path: "/lesson-detail/:id",
-                name: "lesson-detail",
-                component: () => import("../views/lesson/LessonDetail.vue")
             }
         ]
     }
@@ -41,7 +31,6 @@ const router = createRouter({
     routes
 })
 router.beforeEach((to,from, next)=>{
-    
     var exceptAuthenPathName = ["/login","/register","/logout"]
     if(exceptAuthenPathName.includes(to.path)){
         next()
