@@ -7,8 +7,10 @@
       <el-button type="primary" @click="getLesson">Get Lesson</el-button>
     </el-col>
     <el-col :span="14">
-      <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" filterable remote :remote-method="searchNote" clearable
-        :options="searchNoteOptions" :loading="loading" placeholder="Please enter phrase name">
+      <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" filterable remote :remote-method="searchNote"
+        clearable :options="searchNoteOptions" :loading="loading" placeholder="Please enter phrase name"
+        @keyup.ctrl.enter="onSelectPhraseChanges"
+        @keyup.enter="addPhrase">
         <template #default="{ item }">
           <b v-html="item.label" class="me-2"></b>
           <span>&#8594; </span>
@@ -18,7 +20,7 @@
       </el-select-v2>
     </el-col>
     <el-col :span="6">
-      <el-button type="primary" @click="onAddPhraseButtonClick">Add Phrase</el-button>
+      <el-button type="primary" @click="addPhrase">Add Phrase</el-button>
     </el-col>
 
   </el-row>
@@ -27,11 +29,11 @@
   </el-row>
   <el-row :gutter="20">
     <el-col :span="8" v-for="phrase in phrases">
-      <el-card class="box-card mb-10" >
+      <el-card class="box-card mb-10">
         <template #header>
           <div class="card-header">
             <span v-html="phrase.Front"></span>
-            <el-button class="button" type="danger" plain>Remove</el-button>
+            <el-button class="button" type="danger" plain @click="() => removePhrase(phrase.NoteId)">Remove</el-button>
           </div>
         </template>
         <div>
@@ -54,62 +56,53 @@ import NoteInfo from '@/models/note/NoteInfo'
 
 const lessonId = ref<number>(1695944403453)
 const lessonName = ref<string>();
-const selectedPhraseId = ref<number | undefined>();
+
+const selectedPhraseId = ref<number>();
 const searchNoteOptions = ref<OptionType[]>([]);
+
 const loading = ref(false);
 const phrases = ref<NoteInfo[]>([])
-let lessonPhraseIds : number[] = [];
+let lessonPhraseIds: number[] = [];
 let isLoadedLesson = false;
 
+// get lesson
 const getLesson = () => {
-  if(!lessonId.value){
+  if (!lessonId.value) {
     return
   }
-  isLoadedLesson =false;
+  isLoadedLesson = false;
   lessonName.value = "";
   phrases.value = [];
   lessonPhraseIds = [];
+  // get phrase belong to lesson
   getNotes(lessonId.value.toString(), (data: any) => {
     lessonName.value = data.result[0].fields["Lesson Name"].value
-    // get phrase belong to lesson
     var phraseIdsString = data.result[0].fields["PhraseIds"].value as string
     getPhrase(phraseIdsString);
   })
 }
 
-const getPhrase = (phraseIdsString: string) =>{
-  if(phraseIdsString == ""){
+// get phrase belong to lesson
+const getPhrase = (phraseIdsString: any) => {
+  if (phraseIdsString == "") {
     isLoadedLesson = true;
     return
   }
   getNotes(phraseIdsString, (data) => {
-      data.result.forEach((note: any) => {
-        lessonPhraseIds.push(note.noteId as number)
-        phrases.value.push({
-          NoteId: note.noteId as number,
-          Front: note.fields.Front.value as string,
-          Example: note.fields.Example.value as string,
-          Meaning: note.fields.Meaning.value as string,
-        })
-      });
-      isLoadedLesson = true;
-    })
-}
-
-const getNotes = (noteIds: string, onRequestSuccess: (response: any) => void) => {
-  const queryString = "?ids=" + noteIds
-  ajax.get("/notes" + queryString).then(response => {
-    var error = response.data.error
-    if (error != null) {
-      console.log(error)
-      return
-    }
-    onRequestSuccess(response.data);
-  }).catch((res) => {
-    console.log(res.data)
+    data.result.forEach((note: any) => {
+      lessonPhraseIds.push(note.noteId as number)
+      phrases.value.push({
+        NoteId: note.noteId as number,
+        Front: note.fields.Front.value as string,
+        Example: note.fields.Example.value as string,
+        Meaning: note.fields.Meaning.value as string,
+      })
+    });
+    isLoadedLesson = true;
   })
 }
 
+// search phrases
 const searchNote = (query: string) => {
   loading.value = true;
   searchNoteOptions.value = []
@@ -127,8 +120,10 @@ const searchNote = (query: string) => {
   })
 }
 
-const onAddPhraseButtonClick = () => {
-  if(!isLoadedLesson){
+// add phrase to lesson 
+const addPhrase = () => {
+  debugger
+  if (!isLoadedLesson) {
     ElMessage({
       message: 'You must load lesson before add phrase',
       type: 'warning',
@@ -136,21 +131,23 @@ const onAddPhraseButtonClick = () => {
     return
   }
   if (selectedPhraseId.value) {
-    if(lessonPhraseIds.indexOf(selectedPhraseId.value) >= 0){
+    if (lessonPhraseIds.indexOf(selectedPhraseId.value) >= 0) {
       return
     }
-    lessonPhraseIds.push(selectedPhraseId.value)
+    lessonPhraseIds.push(selectedPhraseId.value);
     var data = JSON.stringify({
-      lessonId : lessonId.value,
+      lessonId: lessonId.value,
       phraseIds: lessonPhraseIds.join(",")
     })
-    ajax.post("/lesson-phrase",data).then(res=>{
-      console.log(res.data)
-    })  
-    .catch(res=>{
-      console.log(res.message)
-    })
-  }else{
+    ajax.post("/lesson-phrase", data)
+      .then(res => {
+        getPhrase(selectedPhraseId.value?.toString())
+        selectedPhraseId.value = undefined
+      })
+      .catch(res => {
+        console.log(res.message)
+      })
+  } else {
     ElMessage({
       message: 'You must choose phrase',
       type: 'warning',
@@ -158,6 +155,46 @@ const onAddPhraseButtonClick = () => {
   }
 }
 
+const removePhrase = (phraseId: number) => {
+  lessonPhraseIds = lessonPhraseIds.filter(id => id != phraseId)
+  
+  var data = JSON.stringify({
+    lessonId: lessonId.value,
+    phraseIds: lessonPhraseIds.join(",")
+  })
+  ajax.post("/lesson-phrase", data)
+    .then(res => {
+      phrases.value = phrases.value.filter(p => p.NoteId != phraseId)
+    })
+    .catch(res => {
+      console.log(res.message)
+    })
+}
+
+
+const onSelectPhraseChanges = (event: Event) => {
+  var inputValue = event.target?.value;
+  console.log(inputValue);
+  if (inputValue != null && selectedPhraseId.value == null) {
+    console.log(inputValue)
+  }
+}
+
+
+// get notes by id
+const getNotes = (noteIds: string, onRequestSuccess: (response: any) => void) => {
+  const queryString = "?ids=" + noteIds
+  ajax.get("/notes" + queryString).then(response => {
+    var error = response.data.error
+    if (error != null) {
+      console.log(error)
+      return
+    }
+    onRequestSuccess(response.data);
+  }).catch((res) => {
+    console.log(res.data)
+  })
+}
 </script>
   
 
