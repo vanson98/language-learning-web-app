@@ -122,7 +122,6 @@ const searchNote = (query: string) => {
 
 // add phrase to lesson 
 const addPhrase = () => {
-  debugger
   if (!isLoadedLesson) {
     ElMessage({
       message: 'You must load lesson before add phrase',
