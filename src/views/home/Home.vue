@@ -1,7 +1,7 @@
 <template>
   <el-row :gutter="20">
     <el-col :span="2">
-      <el-input v-model:model-value="lessonId" placeholder="Please input Note Id"></el-input>
+      <el-input-number v-model:model-value="lessonId" placeholder="Please input Note Id" ></el-input-number>
     </el-col>
     <el-col :span="2">
       <el-button type="primary" @click="getLesson">Get Lesson</el-button>
@@ -9,7 +9,7 @@
     <el-col :span="14">
       <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" filterable remote :remote-method="searchNote"
         clearable :options="searchNoteOptions" :loading="loading" placeholder="Please enter phrase name"
-        @keyup.ctrl.enter="onSelectPhraseChanges"
+        
         @keyup.enter="addPhrase">
         <template #default="{ item }">
           <b v-html="item.label" class="me-2"></b>
@@ -33,6 +33,8 @@
         <template #header>
           <div class="card-header">
             <span v-html="phrase.Front"></span>
+            <br>
+            <span>{{ phrase.NoteId }}</span>
             <el-button class="button" type="danger" plain @click="() => removePhrase(phrase.NoteId)">Remove</el-button>
           </div>
         </template>
@@ -49,12 +51,12 @@
 <script lang="ts" setup>
 
 import { ref } from 'vue';
-import { ElButton, ElCol, ElInput, ElRow, ElSelectV2, ElCard, ElMessage } from 'element-plus';
+import { ElButton, ElCol, ElInput, ElRow, ElSelectV2, ElCard, ElMessage,ElInputNumber } from 'element-plus';
 import ajax from '@/libs/ajax';
 import { OptionType } from 'element-plus/es/components/select-v2/src/select.types';
 import NoteInfo from '@/models/note/NoteInfo'
 
-const lessonId = ref<number>(1695944403453)
+const lessonId = ref<number>()
 const lessonName = ref<string>();
 
 const selectedPhraseId = ref<number>();
@@ -117,6 +119,8 @@ const searchNote = (query: string) => {
         })
       });
     }
+  }).catch(res=>{
+    console.log(res.message)
   })
 }
 
@@ -133,10 +137,11 @@ const addPhrase = () => {
     if (lessonPhraseIds.indexOf(selectedPhraseId.value) >= 0) {
       return
     }
-    lessonPhraseIds.push(selectedPhraseId.value);
+    var temphraseIds = lessonPhraseIds.slice()
+    temphraseIds.push(selectedPhraseId.value)
     var data = JSON.stringify({
       lessonId: lessonId.value,
-      phraseIds: lessonPhraseIds.join(",")
+      phraseIds: temphraseIds.join(",")
     })
     ajax.post("/lesson-phrase", data)
       .then(res => {
@@ -171,13 +176,13 @@ const removePhrase = (phraseId: number) => {
 }
 
 
-const onSelectPhraseChanges = (event: Event) => {
-  var inputValue = event.target?.value;
-  console.log(inputValue);
-  if (inputValue != null && selectedPhraseId.value == null) {
-    console.log(inputValue)
-  }
-}
+// const onSelectPhraseChanges = (event: Event) => {
+//   var inputValue = event.target?.value;
+//   console.log(inputValue);
+//   if (inputValue != null && selectedPhraseId.value == null) {
+//     console.log(inputValue)
+//   }
+// }
 
 
 // get notes by id

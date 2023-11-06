@@ -7,18 +7,18 @@ const ajax = axios.create({
   withCredentials: true
 });
 
-ajax.interceptors.response.use(response =>{
-  return response
-},error =>{
-  var bypassAuthenPath = ["/login","/refresh-token"]
+// ajax.interceptors.response.use(response =>{
+//   return response
+// },error =>{
+//   var bypassAuthenPath = ["/login","/refresh-token"]
 
-  if(error.response != null && error.response.status == 401 && !bypassAuthenPath.includes(error.config.url)){
-    requestNewToken()
-  }
-  else{
-    return Promise.reject(error)
-  }
-})
+//   if(error.response != null && error.response.status == 401 && !bypassAuthenPath.includes(error.config.url)){
+//     requestNewToken()
+//   }
+//   else{
+//     return Promise.reject(error)
+//   }
+// })
 
 const requestNewToken = ()=>{
   ajax.post("/refresh-token").then(response=>{
