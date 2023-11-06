@@ -1,7 +1,6 @@
 <template>
   <div>
     <el-container>
-     
       <el-main>
         <div>
           <router-view />

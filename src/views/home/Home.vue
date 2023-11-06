@@ -9,7 +9,7 @@
     <el-col :span="14">
       <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" filterable remote :remote-method="searchNote"
         clearable :options="searchNoteOptions" :loading="loading" placeholder="Please enter phrase name"
-        
+        @keyup.ctrl.space="onSelectPhraseChanges"
         @keyup.enter="addPhrase">
         <template #default="{ item }">
           <b v-html="item.label" class="me-2"></b>
@@ -106,6 +106,7 @@ const getPhrase = (phraseIdsString: any) => {
 
 // search phrases
 const searchNote = (query: string) => {
+  selectedPhraseId.value = undefined;
   loading.value = true;
   searchNoteOptions.value = []
   ajax.get("/search-note?search=" + query).then((res) => {
@@ -176,13 +177,15 @@ const removePhrase = (phraseId: number) => {
 }
 
 
-// const onSelectPhraseChanges = (event: Event) => {
-//   var inputValue = event.target?.value;
-//   console.log(inputValue);
-//   if (inputValue != null && selectedPhraseId.value == null) {
-//     console.log(inputValue)
-//   }
-// }
+const onSelectPhraseChanges = (event: Event) => {
+  var inputElement = event.target as HTMLInputElement;
+  var inputValue = inputElement.value
+  if (inputValue != null && selectedPhraseId.value == null) {
+    var searchString = inputValue.split(" ").join("+")
+    var url = `https://www.google.com/search?q=${searchString}`
+    window.open(url,"_blank","height=570,width=520,scrollbars=yes,status=yes")
+  }
+}
 
 
 // get notes by id
