@@ -183,7 +183,7 @@ const onSelectPhraseChanges = (event: Event) => {
   if (inputValue != null && selectedPhraseId.value == null) {
     var searchString = inputValue.split(" ").join("+")
     var url = `https://www.google.com/search?q=${searchString}`
-    window.open(url,"_blank","height=570,width=520,scrollbars=yes,status=yes")
+    window.open(url,"_blank","height=570,width=1000,scrollbars=yes,status=yes")
   }
 }
 
