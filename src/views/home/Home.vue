@@ -7,9 +7,18 @@
       <el-button type="primary" @click="getLesson">Get Lesson</el-button>
     </el-col>
     <el-col :span="14">
-      <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" filterable remote :remote-method="searchNote"
-        clearable :options="searchNoteOptions" :loading="loading" placeholder="Please enter phrase name"
-        @keyup.ctrl.space="onSelectPhraseChanges"
+      <el-select-v2 
+        v-model="selectedPhraseId" 
+        style="width: 100%;" f
+        ilterable 
+        remote 
+        :remote-method="searchNote"
+        clearable 
+        :options="searchNoteOptions" 
+        :loading="loading" p
+        laceholder="Please enter phrase name"
+        filterable
+        @keyup.ctrl.space="searchPhraseOnGoole"
         @keyup.enter="addPhrase">
         <template #default="{ item }">
           <b v-html="item.label" class="me-2"></b>
@@ -32,10 +41,19 @@
       <el-card class="box-card mb-10">
         <template #header>
           <div class="card-header">
-            <span v-html="phrase.Front"></span>
-            <br>
-            <span>{{ phrase.NoteId }}</span>
-            <el-button class="button" type="danger" plain @click="() => removePhrase(phrase.NoteId)">Remove</el-button>
+            <div >
+              <mark><b v-html="phrase.Front"></b></mark>
+            </div>
+            <div style="max-width: 80px;">
+              <el-button class="button" type="danger" plain @click="() => removePhrase(phrase.NoteId)">Remove</el-button>
+              <el-button 
+                class="button" 
+                type="primary" 
+                plain style="margin: 3px 0 0 0;"
+                @click="()=>copyNoteId(phrase.NoteId)">
+                Copy Id
+            </el-button>
+            </div>
           </div>
         </template>
         <div>
@@ -54,12 +72,13 @@ import { ref } from 'vue';
 import { ElButton, ElCol, ElInput, ElRow, ElSelectV2, ElCard, ElMessage,ElInputNumber } from 'element-plus';
 import ajax from '@/libs/ajax';
 import { OptionType } from 'element-plus/es/components/select-v2/src/select.types';
-import NoteInfo from '@/models/note/NoteInfo'
+import NoteInfo from '@/models/note/NoteInfo' 
+import { isNumeric, isStringNullOrEmpty } from "@/libs/util"
 
-const lessonId = ref<number>()
+const lessonId = ref<number>(1696864482167)
 const lessonName = ref<string>();
 
-const selectedPhraseId = ref<number>();
+const selectedPhraseId = ref<any>();
 const searchNoteOptions = ref<OptionType[]>([]);
 
 const loading = ref(false);
@@ -86,7 +105,7 @@ const getLesson = () => {
 
 // get phrase belong to lesson
 const getPhrase = (phraseIdsString: any) => {
-  if (phraseIdsString == "") {
+  if (isStringNullOrEmpty(phraseIdsString)) {
     isLoadedLesson = true;
     return
   }
@@ -134,30 +153,36 @@ const addPhrase = () => {
     })
     return
   }
-  if (selectedPhraseId.value) {
-    if (lessonPhraseIds.indexOf(selectedPhraseId.value) >= 0) {
-      return
-    }
-    var temphraseIds = lessonPhraseIds.slice()
-    temphraseIds.push(selectedPhraseId.value)
-    var data = JSON.stringify({
-      lessonId: lessonId.value,
-      phraseIds: temphraseIds.join(",")
-    })
-    ajax.post("/lesson-phrase", data)
-      .then(res => {
-        getPhrase(selectedPhraseId.value?.toString())
-        selectedPhraseId.value = undefined
-      })
-      .catch(res => {
-        console.log(res.message)
-      })
-  } else {
+
+  if(isStringNullOrEmpty(selectedPhraseId.value)){
     ElMessage({
       message: 'You must choose phrase',
-      type: 'warning',
+      type: 'error',
     })
+    return
   }
+  if (lessonPhraseIds.indexOf(selectedPhraseId.value) >= 0) {
+    ElMessage({
+      message: 'Phrase already added',
+      type: 'error',
+    })
+    return
+  }
+
+  var temphraseIds = lessonPhraseIds.slice() // clone
+  temphraseIds.push(selectedPhraseId.value)
+  var data = JSON.stringify({
+    lessonId: lessonId.value,
+    phraseIds: temphraseIds.join(",")
+  })
+  ajax.post("/lesson-phrase", data)
+    .then(res => {
+      getPhrase(selectedPhraseId.value?.toString())
+      selectedPhraseId.value = undefined
+    })
+    .catch(res => {
+      console.log(res.message)
+    })
 }
 
 const removePhrase = (phraseId: number) => {
@@ -176,17 +201,15 @@ const removePhrase = (phraseId: number) => {
     })
 }
 
-
-const onSelectPhraseChanges = (event: Event) => {
+const searchPhraseOnGoole = (event: Event) => {
   var inputElement = event.target as HTMLInputElement;
   var inputValue = inputElement.value
   if (inputValue != null && selectedPhraseId.value == null) {
     var searchString = inputValue.split(" ").join("+")
     var url = `https://www.google.com/search?q=${searchString}`
-    window.open(url,"_blank","height=570,width=1000,scrollbars=yes,status=yes")
+    window.open(url,"_blank","height=700,width=800,left=10,top=10,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no,status=yes")
   }
 }
-
 
 // get notes by id
 const getNotes = (noteIds: string, onRequestSuccess: (response: any) => void) => {
@@ -202,6 +225,10 @@ const getNotes = (noteIds: string, onRequestSuccess: (response: any) => void) =>
     console.log(res.data)
   })
 }
+
+const copyNoteId = (noteId: number) =>{
+  navigator.clipboard.writeText(noteId.toString())
+}
 </script>
   
 
@@ -209,7 +236,6 @@ const getNotes = (noteIds: string, onRequestSuccess: (response: any) => void) =>
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
 }
 
 .text {

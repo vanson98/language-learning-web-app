@@ -10,7 +10,6 @@
   </div>
 </template>
 <script lang="ts" setup>
-import MenuComponent from '@/components/MenuComponent.vue';
 import { ElContainer, ElHeader, ElMain } from 'element-plus';
 </script>
 
