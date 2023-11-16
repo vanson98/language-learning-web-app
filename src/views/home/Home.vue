@@ -9,14 +9,13 @@
     <el-col :span="14">
       <el-select-v2 
         v-model="selectedPhraseId" 
-        style="width: 100%;" f
-        ilterable 
+        style="width: 100%;" 
         remote 
         :remote-method="searchNote"
         clearable 
         :options="searchNoteOptions" 
-        :loading="loading" p
-        laceholder="Please enter phrase name"
+        :loading="loading"
+        placeholder="Please enter phrase name"
         filterable
         @keyup.ctrl.space="searchPhraseOnGoole"
         @keyup.enter="addPhrase">
@@ -128,7 +127,7 @@ const searchNote = (query: string) => {
   selectedPhraseId.value = undefined;
   loading.value = true;
   searchNoteOptions.value = []
-  ajax.get("/search-note?search=" + query).then((res) => {
+  ajax.get("/search-phrase?search=" + query).then((res) => {
     loading.value = false
     if (Array.isArray(res.data.result)) {
       res.data.result.forEach((element: any) => {
