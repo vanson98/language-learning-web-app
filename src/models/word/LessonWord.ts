@@ -10,4 +10,5 @@ export default interface LessonWord {
     PrevImageFileName: string,
     Word: string,
     WordDefinition: string,
+    Tags: string[]
 }

@@ -21,12 +21,26 @@
           </el-col>
         </ElRow>
       </el-header>
-      <el-container>
         <el-main>
-
+          <el-carousel type="card" :autoplay="false" :loop="false" height="500px" ref="carouselRef" @change="onCarouseChange">
+            <el-carousel-item v-for="(item,index) in lessonWords" :key="item.NoteId" :name="item.NoteId">
+              <el-card class="word-card-box">
+                <h3>{{ item.Lemma }}</h3>
+                <div class="m-1">
+                  <el-tag v-for="tag in item.Tags" :key="tag" effect="dark">{{ tag }}</el-tag>
+                </div>
+                <p v-html="item.IPA" class="mb-2"></p>
+                <p v-html="item.WordDefinition"></p>
+                <hr>
+                <p v-html="item.Context"></p>
+                <hr>
+                <p v-html="item.ContextTranslation" class="word-ctx-translation"></p>
+                <input autofocus :id="'input-word_'+index" class="w-100">
+              </el-card>
+            </el-carousel-item>
+          </el-carousel>
         </el-main>
-        <el-aside style="background-color: aqua;height: 100%;"></el-aside>
-      </el-container>
+       
     </el-container>
   </div>
 </template>
@@ -36,18 +50,19 @@ import {
   ElContainer,
   ElHeader,
   ElMain,
-  ElAside, ElRow, ElCol, ElSelect, ElInputNumber, ElButton, ElOption, ElMessage, ElInput
+  ElAside, ElRow, ElCol, ElSelect, ElInputNumber, ElButton, ElOption, ElMessage, ElInput,
+  ElCarousel, ElCarouselItem, ElCard,ElTag
 } from 'element-plus';
 import { ref } from 'vue';
 import AnkiResponseModel from '@/models/response/AnkiResponseModel'
 import LessonWord from '@/models/word/LessonWord'
 import moment from 'moment';
 
-const videoId = ref<string>("81504327")
+const videoId = ref<string>("70274007")
 const noteType = ref<number>(0)
 const importingLRData = ref(false)
-const lessonWord = ref<LessonWord[]>([])
-
+const lessonWords = ref<LessonWord[]>([])
+const carouselRef = ref()
 const noteTypeOptions = [
   {
     value: 0,
@@ -91,10 +106,10 @@ const getLessonData = () => {
         showErrorAlert(res.data.error)
         return
       }
-    
+     
       if(res.data.result != null){
         res.data?.result.forEach((item: any)=> {
-          lessonWord.value.push({
+          lessonWords.value.push({
             AudioFileName: item["fields"]["Audio clip media filename"].value as string,
             Context: item["fields"].Context.value as string,
             ContextTranslation: item["fields"]["Context translation"].value as string,
@@ -105,11 +120,12 @@ const getLessonData = () => {
             PrevImageFileName: item["fields"]["Previous Image media filename"].value,
             Word: item["fields"]["Word"].value,
             WordDefinition: item["fields"]["Word definition"].value,
-            NoteId: item.noteId
+            NoteId: item.noteId,
+            Tags: item.tags
           })
         })
       }
-      
+      console.log(lessonWords.value)
     })
     .catch(res => {
       console.log(res)
@@ -118,6 +134,18 @@ const getLessonData = () => {
 
 }
 
+window.addEventListener('keyup', (e) => {
+    if (e.key == 'Enter' && carouselRef.value!= null) {
+      carouselRef.value.next()
+    }
+    if (e.key == 'ArrowLeft' && carouselRef.value!= null) {
+      carouselRef.value.prev()
+    }
+});
+
+const onCarouseChange = (activeIndex: any, oldActiveIndex: any) =>{
+  document.getElementById("input-word_"+activeIndex)?.focus()
+}
 const showErrorAlert = (message: string) => {
   ElMessage({
     message: message,
@@ -136,4 +164,12 @@ const showSuccessAlert = (message: string) => {
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
+.word-card-box{
+  width: 500px;
+  margin: auto;
+}
+.word-card-box h3{
+  margin: 0;
+}
+
 </style>
