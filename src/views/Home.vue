@@ -21,26 +21,27 @@
           </el-col>
         </ElRow>
       </el-header>
-        <el-main>
-          <el-carousel type="card" :autoplay="false" :loop="false" height="500px" ref="carouselRef" @change="onCarouseChange">
-            <el-carousel-item v-for="(item,index) in lessonWords" :key="item.NoteId" :name="item.NoteId">
-              <el-card class="word-card-box">
-                <h3>{{ item.Lemma }}</h3>
-                <div class="m-1">
-                  <el-tag v-for="tag in item.Tags" :key="tag" effect="dark">{{ tag }}</el-tag>
-                </div>
-                <p v-html="item.IPA" class="mb-2"></p>
-                <p v-html="item.WordDefinition"></p>
-                <hr>
-                <p v-html="item.Context"></p>
-                <hr>
-                <p v-html="item.ContextTranslation" class="word-ctx-translation"></p>
-                <input autofocus :id="'input-word_'+index" class="w-100">
-              </el-card>
-            </el-carousel-item>
-          </el-carousel>
-        </el-main>
-       
+      <el-main>
+        <el-carousel type="card" :autoplay="false" :loop="false" height="500px" ref="carouselRef"
+          @change="onCarouseChange">
+          <el-carousel-item v-for="(item, index) in lessonWords" :key="item.NoteId" :name="item.NoteId">
+            <el-card class="word-card-box">
+              <h3>{{ item.Lemma }}</h3>
+              <div class="m-1">
+                <el-tag v-for="tag in item.Tags" :key="tag" effect="dark">{{ tag }}</el-tag>
+              </div>
+              <p v-html="item.IPA" class="mb-2"></p>
+              <p v-html="item.WordDefinition"></p>
+              <hr>
+              <p v-html="item.Context"></p>
+              <hr>
+              <p v-html="item.ContextTranslation" class="word-ctx-translation"></p>
+              <input autofocus :id="'input-word_' + index" class="w-100">
+            </el-card>
+          </el-carousel-item>
+        </el-carousel>
+      </el-main>
+
     </el-container>
   </div>
 </template>
@@ -51,7 +52,7 @@ import {
   ElHeader,
   ElMain,
   ElAside, ElRow, ElCol, ElSelect, ElInputNumber, ElButton, ElOption, ElMessage, ElInput,
-  ElCarousel, ElCarouselItem, ElCard,ElTag
+  ElCarousel, ElCarouselItem, ElCard, ElTag
 } from 'element-plus';
 import { ref } from 'vue';
 import AnkiResponseModel from '@/models/response/AnkiResponseModel'
@@ -106,14 +107,14 @@ const getLessonData = () => {
         showErrorAlert(res.data.error)
         return
       }
-     
-      if(res.data.result != null){
-        res.data?.result.forEach((item: any)=> {
+
+      if (res.data.result != null) {
+        res.data?.result.forEach((item: any) => {
           lessonWords.value.push({
             AudioFileName: item["fields"]["Audio clip media filename"].value as string,
             Context: item["fields"].Context.value as string,
             ContextTranslation: item["fields"]["Context translation"].value as string,
-            DateCreated: moment(item["fields"]["Date created"].value as string,"YYYY-MM-DD hh:mm").toDate(),
+            DateCreated: moment(item["fields"]["Date created"].value as string, "YYYY-MM-DD hh:mm").toDate(),
             IPA: item["fields"]["IPA"].value,
             Lemma: item["fields"]["Lemma"].value,
             NextImageFileName: item["fields"]["Next Image media filename"].value,
@@ -135,16 +136,14 @@ const getLessonData = () => {
 }
 
 window.addEventListener('keyup', (e) => {
-    if (e.key == 'Enter' && carouselRef.value!= null) {
-      carouselRef.value.next()
-    }
-    if (e.key == 'ArrowLeft' && carouselRef.value!= null) {
-      carouselRef.value.prev()
-    }
+  if (e.key == 'Enter' && carouselRef.value != null) {
+    carouselRef.value.next()
+  }
+
 });
 
-const onCarouseChange = (activeIndex: any, oldActiveIndex: any) =>{
-  document.getElementById("input-word_"+activeIndex)?.focus()
+const onCarouseChange = (activeIndex: any, oldActiveIndex: any) => {
+  document.getElementById("input-word_" + activeIndex)?.focus()
 }
 const showErrorAlert = (message: string) => {
   ElMessage({
@@ -164,12 +163,13 @@ const showSuccessAlert = (message: string) => {
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
-.word-card-box{
+
+.word-card-box {
   width: 500px;
   margin: auto;
 }
-.word-card-box h3{
+
+.word-card-box h3 {
   margin: 0;
 }
-
 </style>

@@ -1,80 +1,74 @@
 <template>
-  <el-row :gutter="20">
-    <el-col :span="2">
-      <el-input-number v-model:model-value="lessonId" placeholder="Please input Note Id" ></el-input-number>
-    </el-col>
-    <el-col :span="2">
-      <el-button type="primary" @click="getLesson">Get Lesson</el-button>
-    </el-col>
-    <el-col :span="14">
-      <el-select-v2 
-        v-model="selectedPhraseId" 
-        style="width: 100%;" 
-        remote 
-        :remote-method="searchNote"
-        clearable 
-        :options="searchNoteOptions" 
-        :loading="loading"
-        placeholder="Please enter phrase name"
-        filterable
-        @keyup.ctrl.space="searchPhraseOnGoole"
-        @keyup.enter="addPhrase">
-        <template #default="{ item }">
-          <b v-html="item.label" class="me-2"></b>
-          <span>&#8594; </span>
-          <span v-html="item.options">
-          </span>
-        </template>
-      </el-select-v2>
-    </el-col>
-    <el-col :span="6">
-      <el-button type="primary" @click="addPhrase">Add Phrase</el-button>
-    </el-col>
-
-  </el-row>
-  <el-row>
-    <h4 v-html="lessonName"></h4>
-  </el-row>
-  <el-row :gutter="20">
-    <el-col :span="8" v-for="phrase in phrases">
-      <el-card class="box-card mb-10">
-        <template #header>
-          <div class="card-header">
-            <div >
-              <mark><b v-html="phrase.Front"></b></mark>
+  <el-container>
+    <el-header>
+      <el-row :gutter="20">
+        <el-col :span="2">
+          <el-input-number v-model:model-value="lessonId" placeholder="Please input Note Id"></el-input-number>
+        </el-col>
+        <el-col :span="2">
+          <el-button type="primary" @click="getLesson">Get Lesson</el-button>
+        </el-col>
+        <el-col :span="14">
+          <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" remote :remote-method="searchNote" clearable
+            :options="searchNoteOptions" :loading="loading" placeholder="Please enter phrase name" filterable
+            @keyup.ctrl.space="searchPhraseOnGoole" @keyup.enter="addPhrase">
+            <template #default="{ item }">
+              <b v-html="item.label" class="me-2"></b>
+              <span>&#8594; </span>
+              <span v-html="item.options">
+              </span>
+            </template>
+          </el-select-v2>
+        </el-col>
+        <el-col :span="6">
+          <el-button type="primary" @click="addPhrase">Add Phrase</el-button>
+        </el-col>
+      </el-row>
+    </el-header>
+    <el-main>
+      <el-row>
+        <h4 v-html="lessonName"></h4>
+      </el-row>
+      <el-row :gutter="20">
+        <el-col :span="8" v-for="phrase in phrases">
+          <el-card class="box-card mb-10">
+            <template #header>
+              <div class="card-header">
+                <div>
+                  <mark><b v-html="phrase.Front"></b></mark>
+                </div>
+                <div style="max-width: 80px;">
+                  <el-button class="button" type="danger" plain
+                    @click="() => removePhrase(phrase.NoteId)">Remove</el-button>
+                  <el-button class="button" type="primary" plain style="margin: 3px 0 0 0;"
+                    @click="() => copyNoteId(phrase.NoteId)">
+                    Copy Id
+                  </el-button>
+                </div>
+              </div>
+            </template>
+            <div>
+              <span v-html="phrase.Meaning"></span>
+              <hr>
+              <span v-html="phrase.Example"></span>
             </div>
-            <div style="max-width: 80px;">
-              <el-button class="button" type="danger" plain @click="() => removePhrase(phrase.NoteId)">Remove</el-button>
-              <el-button 
-                class="button" 
-                type="primary" 
-                plain style="margin: 3px 0 0 0;"
-                @click="()=>copyNoteId(phrase.NoteId)">
-                Copy Id
-            </el-button>
-            </div>
-          </div>
-        </template>
-        <div>
-          <span v-html="phrase.Meaning"></span>
-          <hr>
-          <span v-html="phrase.Example"></span>
-        </div>
-      </el-card>
-    </el-col>
-  </el-row>
+          </el-card>
+        </el-col>
+      </el-row>
+    </el-main>
+  </el-container>
 </template>
 
 <script lang="ts" setup>
 
 import { ref } from 'vue';
-import { ElButton, ElCol, ElInput, ElRow, ElSelectV2, ElCard, ElMessage,ElInputNumber } from 'element-plus';
+import { ElButton, ElCol, ElInput, ElRow, ElSelectV2, ElCard, ElMessage, ElInputNumber, ElContainer, ElMain, ElHeader } from 'element-plus';
 import ajax from '@/libs/ajax';
 import { OptionType } from 'element-plus/es/components/select-v2/src/select.types';
-import NoteInfo from '@/models/note/NoteInfo' 
+import NoteInfo from '@/models/note/NoteInfo'
 import { isNumeric, isStringNullOrEmpty } from "@/libs/util"
 
-const lessonId = ref<number>(1696864482167)
+const lessonId = ref<number>(1700274502629)
 const lessonName = ref<string>();
 
 const selectedPhraseId = ref<any>();
@@ -138,7 +132,7 @@ const searchNote = (query: string) => {
         })
       });
     }
-  }).catch(res=>{
+  }).catch(res => {
     console.log(res.message)
   })
 }
@@ -153,7 +147,7 @@ const addPhrase = () => {
     return
   }
 
-  if(isStringNullOrEmpty(selectedPhraseId.value)){
+  if (isStringNullOrEmpty(selectedPhraseId.value)) {
     ElMessage({
       message: 'You must choose phrase',
       type: 'error',
@@ -186,7 +180,7 @@ const addPhrase = () => {
 
 const removePhrase = (phraseId: number) => {
   lessonPhraseIds = lessonPhraseIds.filter(id => id != phraseId)
-  
+
   var data = JSON.stringify({
     lessonId: lessonId.value,
     phraseIds: lessonPhraseIds.join(",")
@@ -206,7 +200,7 @@ const searchPhraseOnGoole = (event: Event) => {
   if (inputValue != null && selectedPhraseId.value == null) {
     var searchString = inputValue.split(" ").join("+")
     var url = `https://www.google.com/search?q=${searchString}`
-    window.open(url,"_blank","height=700,width=800,left=10,top=10,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no,status=yes")
+    window.open(url, "_blank", "height=700,width=800,left=10,top=10,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no,status=yes")
   }
 }
 
@@ -225,7 +219,7 @@ const getNotes = (noteIds: string, onRequestSuccess: (response: any) => void) =>
   })
 }
 
-const copyNoteId = (noteId: number) =>{
+const copyNoteId = (noteId: number) => {
   navigator.clipboard.writeText(noteId.toString())
 }
 </script>

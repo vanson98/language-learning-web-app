@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router"
-import Layout from "../views/Layout.vue"
+import Home from "../views/Home.vue"
+import SearchPhrase from "../views/SearchPhrase.vue"
 
 
 const routes: Array<RouteRecordRaw> = [
@@ -13,15 +14,13 @@ const routes: Array<RouteRecordRaw> = [
     },
     {
         path: "/",
-        name: "layout",
-        component: Layout,
-        children: [
-            {
-                path: "/home",
-                name: "home",
-                component: () => import("../views/home/Home.vue")
-            }
-        ]
+        name: "",
+        component: Home,
+    },
+    {
+        path: "/search-phrase",
+        name: "search-phrase",
+        component: SearchPhrase,
     }
 ]
 
