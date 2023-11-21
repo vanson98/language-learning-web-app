@@ -7,7 +7,7 @@
             <ElInput v-model="videoId" class="pe-2" />
           </el-col>
           <el-col :span="3">
-            <el-select v-model="noteType" placeholder="Note Type" class="pe-2">
+            <el-select v-model="selectNoteType" placeholder="Note Type" class="pe-2">
               <el-option v-for="item in noteTypeOptions" :key="item.value" :label="item.label" :value="item.value">
               </el-option>
             </el-select>
@@ -22,7 +22,7 @@
         </ElRow>
       </el-header>
       <el-main>
-        <el-carousel type="card" :autoplay="false" :loop="false" height="500px" ref="carouselRef"
+        <el-carousel trigger="click" type="card" :autoplay="false" :loop="false" height="600px" ref="carouselRef"
           @change="onCarouseChange">
           <el-carousel-item v-for="(item, index) in lessonWords" :key="item.NoteId" :name="item.NoteId">
             <el-card class="word-card-box">
@@ -36,7 +36,15 @@
               <p v-html="item.Context"></p>
               <hr>
               <p v-html="item.ContextTranslation" class="word-ctx-translation"></p>
-              <input autofocus :id="'input-word_' + index" class="w-100">
+              <hr>
+              <div class="card-images">
+                <img :src="SERVER_BASE_URL + '/image?fileName=' + item.PrevImageFileName">
+                <img :src="SERVER_BASE_URL + '/image?fileName=' + item.NextImageFileName">
+              </div>
+              <audio :id="'card-audio-' + index">
+                <source :src="SERVER_BASE_URL + '/audio?fileName=' + item.AudioFileName" type="audio/mpeg">
+              </audio>
+              <!-- <input autofocus :id="'input-word_' + index" class="w-100"> -->
             </el-card>
           </el-carousel-item>
         </el-carousel>
@@ -58,9 +66,10 @@ import { ref } from 'vue';
 import AnkiResponseModel from '@/models/response/AnkiResponseModel'
 import LessonWord from '@/models/word/LessonWord'
 import moment from 'moment';
+import SERVER_BASE_URL from '@/libs/url'
 
 const videoId = ref<string>("70274007")
-const noteType = ref<number>(0)
+const selectNoteType = ref<number>(0)
 const importingLRData = ref(false)
 const lessonWords = ref<LessonWord[]>([])
 const carouselRef = ref()
@@ -71,13 +80,10 @@ const noteTypeOptions = [
   },
   {
     value: 1,
-    label: "LR Phrase"
-  },
-  {
-    value: 2,
     label: "Phrase"
   }
 ]
+let currentActiveNoteIndex = 0;
 
 const importLRData = () => {
   importingLRData.value = true
@@ -98,9 +104,17 @@ const getLessonData = () => {
   // ajax.get(`/lesson?vid=${videoId.value}`).then((res)=>{
   //   console.log(res)
   // }).catch(res=>{
-
   // })
+  
+  if (selectNoteType.value == 0) {
+    getLessonWord()
+  }
+  else if (selectNoteType.value == 1) {
+    getLessonPhrase()
+  }
+}
 
+const getLessonWord = () => {
   ajax.get<AnkiResponseModel>(`/lesson-words?vid=${videoId.value}`)
     .then(res => {
       if (res.data.error != null) {
@@ -109,6 +123,7 @@ const getLessonData = () => {
       }
 
       if (res.data.result != null) {
+        lessonWords.value = []
         res.data?.result.forEach((item: any) => {
           lessonWords.value.push({
             AudioFileName: item["fields"]["Audio clip media filename"].value as string,
@@ -131,19 +146,27 @@ const getLessonData = () => {
     .catch(res => {
       console.log(res)
     })
+}
 
+const getLessonPhrase = () => {
 
 }
 
 window.addEventListener('keyup', (e) => {
-  if (e.key == 'Enter' && carouselRef.value != null) {
+  if (e.key == 'ArrowRight' && carouselRef.value != null) {
     carouselRef.value.next()
   }
-
+  if (e.key == 'ArrowLeft' && carouselRef.value != null) {
+    carouselRef.value.prev()
+  }
+  if ((e.key == "r" || e.key == "R") && e?.target?.tagName != "INPUT") {
+    document.getElementById("card-audio-" + currentActiveNoteIndex)?.play()
+  }
 });
 
 const onCarouseChange = (activeIndex: any, oldActiveIndex: any) => {
-  document.getElementById("input-word_" + activeIndex)?.focus()
+  currentActiveNoteIndex = activeIndex;
+  document.getElementById("card-audio-" + activeIndex)?.play()
 }
 const showErrorAlert = (message: string) => {
   ElMessage({
@@ -171,5 +194,10 @@ body {
 
 .word-card-box h3 {
   margin: 0;
+}
+
+.card-images img {
+  width: 50%;
+  padding: 8px;
 }
 </style>
