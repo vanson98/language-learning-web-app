@@ -2,7 +2,7 @@
   <div>
     <el-container>
       <el-header>
-        <ElRow class="mt-2">
+        <el-row class="mt-2">
           <el-col :span="3">
             <ElInput v-model="videoId" class="pe-2" />
           </el-col>
@@ -19,39 +19,27 @@
             <el-button type="primary" v-bind:loading="importingLRData" @click="importLRData">
               Import LR Data</el-button>
           </el-col>
-        </ElRow>
+          <el-col :span="3">
+            <el-button type="primary" @click="openSearchPhraseDialog">Search Phrase</el-button>
+          </el-col>
+        </el-row>
       </el-header>
       <el-main>
-        <el-carousel trigger="click" type="card" :autoplay="false" :loop="false" height="600px" ref="carouselRef"
-          @change="onCarouseChange">
-          <el-carousel-item v-for="(item, index) in lessonWords" :key="item.NoteId" :name="item.NoteId">
-            <el-card class="word-card-box">
-              <h3>{{ item.Lemma }}</h3>
-              <div class="m-1">
-                <el-tag v-for="tag in item.Tags" :key="tag" effect="dark">{{ tag }}</el-tag>
-              </div>
-              <p v-html="item.IPA" class="mb-2"></p>
-              <p v-html="item.WordDefinition"></p>
-              <hr>
-              <p v-html="item.Context"></p>
-              <hr>
-              <p v-html="item.ContextTranslation" class="word-ctx-translation"></p>
-              <hr>
-              <div class="card-images">
-                <img :src="SERVER_BASE_URL + '/image?fileName=' + item.PrevImageFileName">
-                <img :src="SERVER_BASE_URL + '/image?fileName=' + item.NextImageFileName">
-              </div>
-              <audio :id="'card-audio-' + index">
-                <source :src="SERVER_BASE_URL + '/audio?fileName=' + item.AudioFileName" type="audio/mpeg">
-              </audio>
-              <!-- <input autofocus :id="'input-word_' + index" class="w-100"> -->
-            </el-card>
-          </el-carousel-item>
-        </el-carousel>
+        <ReviewLessonWordSlider 
+          v-if="selectNoteType == 0" 
+          :carousel-ref-fun="carouselRefFn" 
+          :lesson-words="lessonWords" 
+          @on-slice-change="playCardAudio" >
+        </ReviewLessonWordSlider>
+        <ReviewLessonPhraseSlider  
+          v-if="selectNoteType == 1" 
+          :lesson-phrases="lessonPhrases"
+          :carousel-ref-fun="carouselRefFn">
+        </ReviewLessonPhraseSlider>
       </el-main>
-
     </el-container>
   </div>
+  <SearchPhraseDialog :visible="searchPhraseDialogVisible" :close="closeSearchPhraseDialog"/>
 </template>
 <script lang="ts" setup>
 import ajax from '@/libs/ajax';
@@ -59,20 +47,26 @@ import {
   ElContainer,
   ElHeader,
   ElMain,
-  ElAside, ElRow, ElCol, ElSelect, ElInputNumber, ElButton, ElOption, ElMessage, ElInput,
-  ElCarousel, ElCarouselItem, ElCard, ElTag
+  ElRow, ElCol, ElSelect, ElButton, ElOption, ElMessage, ElInput,
 } from 'element-plus';
 import { ref } from 'vue';
 import AnkiResponseModel from '@/models/response/AnkiResponseModel'
-import LessonWord from '@/models/word/LessonWord'
+import LessonWordModel from '@/models/lesson/LessonWordModel'
+import LessonPhraseModel from '@/models/lesson/LessonPhraseModel'
 import moment from 'moment';
-import SERVER_BASE_URL from '@/libs/url'
+import ReviewLessonWordSlider from './components/ReviewLessonWordSlider.vue'
+import ReviewLessonPhraseSlider from './components/ReviewLessonPhraseSlider.vue';
+import SearchPhraseDialog from './modals/SearchPhraseDialog.vue'
 
 const videoId = ref<string>("70274007")
 const selectNoteType = ref<number>(0)
 const importingLRData = ref(false)
-const lessonWords = ref<LessonWord[]>([])
+const lessonWords = ref<LessonWordModel[]>([])
+const lessonPhrases = ref<LessonPhraseModel[]>([])
 const carouselRef = ref()
+const carouselRefFn = () => carouselRef
+const searchPhraseDialogVisible = ref<boolean>(false)
+
 const noteTypeOptions = [
   {
     value: 0,
@@ -83,7 +77,7 @@ const noteTypeOptions = [
     label: "Phrase"
   }
 ]
-let currentActiveNoteIndex = 0;
+let currentActiveCardIndex : number = 0;
 
 const importLRData = () => {
   importingLRData.value = true
@@ -105,13 +99,11 @@ const getLessonData = () => {
   //   console.log(res)
   // }).catch(res=>{
   // })
-  
-  if (selectNoteType.value == 0) {
+
     getLessonWord()
-  }
-  else if (selectNoteType.value == 1) {
-    getLessonPhrase()
-  }
+  
+    getLessonPhrases()
+  
 }
 
 const getLessonWord = () => {
@@ -121,13 +113,12 @@ const getLessonWord = () => {
         showErrorAlert(res.data.error)
         return
       }
-
       if (res.data.result != null) {
         lessonWords.value = []
         res.data?.result.forEach((item: any) => {
           lessonWords.value.push({
             AudioFileName: item["fields"]["Audio clip media filename"].value as string,
-            Context: item["fields"].Context.value as string,
+            Context: hightLightWordInContext(item["fields"]["Word"].value, item["fields"].Context.value),
             ContextTranslation: item["fields"]["Context translation"].value as string,
             DateCreated: moment(item["fields"]["Date created"].value as string, "YYYY-MM-DD hh:mm").toDate(),
             IPA: item["fields"]["IPA"].value,
@@ -140,34 +131,97 @@ const getLessonWord = () => {
             Tags: item.tags
           })
         })
+        lessonWords.value.sort((a, b): number => {
+          if (a.DateCreated < b.DateCreated) {
+            return -1
+          } else if (a.DateCreated > b.DateCreated) {
+            return 1
+          }
+          return 0
+        })
       }
-      console.log(lessonWords.value)
     })
     .catch(res => {
       console.log(res)
     })
 }
 
-const getLessonPhrase = () => {
+const getLessonPhrases = () => {
+  ajax.get<AnkiResponseModel>(`/lesson-phrases?vid=${videoId.value}`)
+    .then(res=>{
+      if (res.data.error != null) {
+        showErrorAlert(res.data.error)
+        return
+      }
+      if (res.data.result != null) {
+        lessonPhrases.value = []
+        res.data?.result.forEach((item: any) => {
+          lessonPhrases.value.push({
+            NoteId: item.noteId,
+            Tags: item.tags,
+            Context: item["fields"].Context.value,
+            ContextTranslation: item["fields"]["Context translation"].value as string,
+            NextImageFileName: item["fields"]["Next Image media filename"].value,
+            PrevImageFileName: item["fields"]["Previous Image media filename"].value,
+            AudioFileName: item["fields"]["Audio clip media filename"].value as string,
+            DateCreated: moment(item["fields"]["Date created"].value as string, "YYYY-MM-DD hh:mm").toDate(),
+            PhraseId: item["fields"]["PhraseId"].value as string,
+          })
+        })
+        lessonPhrases.value.sort((a, b): number => {
+          if (a.DateCreated < b.DateCreated) {
+            return -1 // a --> b
+          } else if (a.DateCreated > b.DateCreated) {
+            return 1  // b --> a
+          }
+          return 0
+        })
+      }
+    })
+    .catch(res => {
+      console.log(res)
+    })
+}
 
+const hightLightWordInContext = (word: string, context: string): string => {
+  var contextArray = context.split(word)
+  return contextArray[0] + `<span style="background-color: rgb(255, 170, 0);">${word}</span>` + contextArray[1]
+}
+
+const playCardAudio = (cardIndex : number) =>{
+  currentActiveCardIndex = cardIndex;
+  const element = document.getElementById("card-audio-" + cardIndex)
+  if(element instanceof HTMLAudioElement){
+    element.play()
+  }
+}
+
+const openSearchPhraseDialog = () =>{
+  debugger
+  searchPhraseDialogVisible.value = true
+}
+
+ 
+const closeSearchPhraseDialog = () =>{
+  searchPhraseDialogVisible.value = false
 }
 
 window.addEventListener('keyup', (e) => {
+  var targetElement = e.target;
   if (e.key == 'ArrowRight' && carouselRef.value != null) {
     carouselRef.value.next()
   }
   if (e.key == 'ArrowLeft' && carouselRef.value != null) {
     carouselRef.value.prev()
   }
-  if ((e.key == "r" || e.key == "R") && e?.target?.tagName != "INPUT") {
-    document.getElementById("card-audio-" + currentActiveNoteIndex)?.play()
+  if(!(targetElement instanceof HTMLInputElement) && (e.key == "r" || e.key == "R") ){
+    var audioElement = document.getElementById("card-audio-" + currentActiveCardIndex)
+    if(audioElement instanceof HTMLAudioElement){
+      audioElement.play()
+    }
   }
 });
 
-const onCarouseChange = (activeIndex: any, oldActiveIndex: any) => {
-  currentActiveNoteIndex = activeIndex;
-  document.getElementById("card-audio-" + activeIndex)?.play()
-}
 const showErrorAlert = (message: string) => {
   ElMessage({
     message: message,
