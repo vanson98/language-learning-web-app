@@ -47,15 +47,17 @@ const props = defineProps<{
 
 const carouselRef = props.carouselRefFun()
 
-const emit = defineEmits(["onSliceChange"])
+const emit = defineEmits(["onSliceChange","onSelectedText"])
 
 const onCarouseChange = (activeIndex: any, oldActiveIndex: any) => {
   emit("onSliceChange",activeIndex)
 }
 
-window.addEventListener('keyup', (e) => {
-  if (e.ctrlKey && e.altKey && e.key == 'g') {
-    
+window.addEventListener('keydown', (e) => {
+  if (e.altKey && e.key == 'q') {
+    if(window.getSelection != null){
+        emit("onSelectedText",window.getSelection()?.toString())
+    }
   }
 });
 </script>

@@ -16,30 +16,25 @@
             <el-button type="success" @click="getLessonData">Load Lesson</el-button>
           </el-col>
           <el-col :span="3">
-            <el-button type="primary" v-bind:loading="importingLRData" @click="importLRData">
-              Import LR Data</el-button>
+            <el-button type="primary" @click="openSearchPhraseDialog">Search Phrase</el-button>
           </el-col>
           <el-col :span="3">
-            <el-button type="primary" @click="openSearchPhraseDialog">Search Phrase</el-button>
+            <el-button type="danger" v-bind:loading="importingLRData" @click="importLRData">
+              Import LR Data</el-button>
           </el-col>
         </el-row>
       </el-header>
       <el-main>
-        <ReviewLessonWordSlider 
-          v-if="selectNoteType == 0" 
-          :carousel-ref-fun="carouselRefFn" 
-          :lesson-words="lessonWords" 
-          @on-slice-change="playCardAudio" >
+        <ReviewLessonWordSlider v-if="selectNoteType == 0" :carousel-ref-fun="carouselRefFn" :lesson-words="lessonWords"
+          @on-slice-change="playCardAudio">
         </ReviewLessonWordSlider>
-        <ReviewLessonPhraseSlider  
-          v-if="selectNoteType == 1" 
-          :lesson-phrases="lessonPhrases"
-          :carousel-ref-fun="carouselRefFn">
+        <ReviewLessonPhraseSlider v-if="selectNoteType == 1" :lesson-phrases="lessonPhrases"
+          :carousel-ref-fun="carouselRefFn" @on-slice-change="playCardAudio" @on-selected-text="onSelectedText">
         </ReviewLessonPhraseSlider>
       </el-main>
     </el-container>
   </div>
-  <SearchPhraseDialog :visible="searchPhraseDialogVisible" :close="closeSearchPhraseDialog"/>
+  <SearchPhraseDialog :visible="searchPhraseDialogVisible" :search-text="searchText" @close="closeSearchPhraseDialog" />
 </template>
 <script lang="ts" setup>
 import ajax from '@/libs/ajax';
@@ -65,6 +60,8 @@ const lessonWords = ref<LessonWordModel[]>([])
 const lessonPhrases = ref<LessonPhraseModel[]>([])
 const carouselRef = ref()
 const carouselRefFn = () => carouselRef
+
+const searchText = ref<string>("")
 const searchPhraseDialogVisible = ref<boolean>(false)
 
 const noteTypeOptions = [
@@ -77,7 +74,7 @@ const noteTypeOptions = [
     label: "Phrase"
   }
 ]
-let currentActiveCardIndex : number = 0;
+let currentActiveCardIndex: number = 0;
 
 const importLRData = () => {
   importingLRData.value = true
@@ -99,11 +96,8 @@ const getLessonData = () => {
   //   console.log(res)
   // }).catch(res=>{
   // })
-
-    getLessonWord()
-  
-    getLessonPhrases()
-  
+  getLessonWord()
+  getLessonPhrases()
 }
 
 const getLessonWord = () => {
@@ -118,7 +112,7 @@ const getLessonWord = () => {
         res.data?.result.forEach((item: any) => {
           lessonWords.value.push({
             AudioFileName: item["fields"]["Audio clip media filename"].value as string,
-            Context: hightLightWordInContext(item["fields"]["Word"].value, item["fields"].Context.value),
+            Context: item["fields"].Context.value,
             ContextTranslation: item["fields"]["Context translation"].value as string,
             DateCreated: moment(item["fields"]["Date created"].value as string, "YYYY-MM-DD hh:mm").toDate(),
             IPA: item["fields"]["IPA"].value,
@@ -148,7 +142,7 @@ const getLessonWord = () => {
 
 const getLessonPhrases = () => {
   ajax.get<AnkiResponseModel>(`/lesson-phrases?vid=${videoId.value}`)
-    .then(res=>{
+    .then(res => {
       if (res.data.error != null) {
         showErrorAlert(res.data.error)
         return
@@ -183,43 +177,46 @@ const getLessonPhrases = () => {
     })
 }
 
-const hightLightWordInContext = (word: string, context: string): string => {
-  var contextArray = context.split(word)
-  return contextArray[0] + `<span style="background-color: rgb(255, 170, 0);">${word}</span>` + contextArray[1]
-}
-
-const playCardAudio = (cardIndex : number) =>{
+const playCardAudio = (cardIndex: number) => {
   currentActiveCardIndex = cardIndex;
   const element = document.getElementById("card-audio-" + cardIndex)
-  if(element instanceof HTMLAudioElement){
+  if (element instanceof HTMLAudioElement) {
     element.play()
   }
 }
 
-const openSearchPhraseDialog = () =>{
-  debugger
+const openSearchPhraseDialog = () => {
   searchPhraseDialogVisible.value = true
 }
 
- 
-const closeSearchPhraseDialog = () =>{
+const closeSearchPhraseDialog = () => {
   searchPhraseDialogVisible.value = false
+}
+
+const onSelectedText = (value: string | null) => {
+  if (value != null && value.trim() != "") {
+    searchText.value = value;
+    searchPhraseDialogVisible.value = true;
+  }
 }
 
 window.addEventListener('keyup', (e) => {
   var targetElement = e.target;
-  if (e.key == 'ArrowRight' && carouselRef.value != null) {
-    carouselRef.value.next()
-  }
-  if (e.key == 'ArrowLeft' && carouselRef.value != null) {
-    carouselRef.value.prev()
-  }
-  if(!(targetElement instanceof HTMLInputElement) && (e.key == "r" || e.key == "R") ){
-    var audioElement = document.getElementById("card-audio-" + currentActiveCardIndex)
-    if(audioElement instanceof HTMLAudioElement){
-      audioElement.play()
+  if (!(targetElement instanceof HTMLInputElement)) {
+    if (e.key == 'ArrowRight' && carouselRef.value != null) {
+      carouselRef.value.next()
+    }
+    if (e.key == 'ArrowLeft' && carouselRef.value != null) {
+      carouselRef.value.prev()
+    }
+    if (e.key == "r" || e.key == "R") {
+      var audioElement = document.getElementById("card-audio-" + currentActiveCardIndex)
+      if (audioElement instanceof HTMLAudioElement) {
+        audioElement.play()
+      }
     }
   }
+
 });
 
 const showErrorAlert = (message: string) => {
