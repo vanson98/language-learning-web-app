@@ -1,7 +1,8 @@
 <template>
-    <el-dialog v-model="visible" title="Search Phrase" width="30%" :before-close="closeDialog" @open="onDialogOpen">
+    <el-dialog v-model="visible" title="Search Phrase" width="30%" @open="onDialogOpen">
         <div>
-            <el-input v-model="searchPhraseText" @keyup.enter="()=>searchNote(searchPhraseText)" placeholder="Phrase Text" :tabindex="0"></el-input>
+            <el-input v-model="searchPhraseText" @keyup.enter="() => searchNote(searchPhraseText)" placeholder="Phrase Text"
+                :tabindex="0"></el-input>
             <div class="mt-2">
                 <el-input v-model="phraseMeaning" placeholder="Phrase Meaning"></el-input>
             </div>
@@ -22,12 +23,12 @@
                     </span>
                 </template>
             </el-select-v2>
-           
+
         </div>
         <template #footer>
             <span class="dialog-footer">
-                <el-button @click="closeDialog">Cancel</el-button>
-                <el-button type="primary" @click="closeDialog">
+                <el-button @click="() => closeDialog(null)">Cancel</el-button>
+                <el-button type="primary" @click="addParentPhrase">
                     Confirm
                 </el-button>
             </span>
@@ -36,12 +37,15 @@
 </template>
 <script setup lang="ts">
 import ajax from '@/libs/ajax';
-import { ElDialog, ElButton, ElSelectV2, ElInput } from 'element-plus';
+import AnkiResponseModel from '@/models/response/AnkiResponseModel';
+import { ElDialog, ElButton, ElSelectV2, ElInput, ElMessage } from 'element-plus';
 import { OptionType } from 'element-plus/es/components/select-v2/src/select.types';
 import { ref } from 'vue'
 const props = defineProps<{
     visible: boolean,
-    searchText: string
+    searchText: string,
+    currentLRPhraseId: string,
+    currentParentPhraseIds: string[]
 }>()
 const emit = defineEmits(["close"])
 
@@ -52,34 +56,54 @@ const searchPhraseText = ref("")
 const phraseMeaning = ref("")
 const totalAnkiSearchResult = ref(0)
 
-const onDialogOpen = ()=>{
+const onDialogOpen = () => {
     searchNote(props.searchText)
     searchPhraseText.value = props.searchText
 }
 
 const searchNote = (query: string) => {
-  selectedPhraseId.value = undefined;
-  loading.value = true;
-  phraseOptions.value = []
-  ajax.get("/search-phrase?search=" + query).then((res) => {
-    loading.value = false
-    if (Array.isArray(res.data.result)) {
-        totalAnkiSearchResult.value = res.data.result.length
-        res.data.result.forEach((element: any) => {
-            phraseOptions.value.push({
-            label: element.fields.Front.value,
-            options: element.fields.Meaning.value,
-            value: element.noteId
-            })
-        });
-    }
-  }).catch(res => {
-    console.log(res.message)
-  })
+    selectedPhraseId.value = undefined;
+    loading.value = true;
+    phraseOptions.value = []
+    ajax.get("/search-phrase?search=" + query).then((res) => {
+        loading.value = false
+        if (Array.isArray(res.data.result)) {
+            totalAnkiSearchResult.value = res.data.result.length
+            res.data.result.forEach((element: any) => {
+                phraseOptions.value.push({
+                    label: element.fields.Front.value,
+                    options: element.fields.Meaning.value,
+                    value: element.noteId
+                })
+            });
+        }
+    }).catch(res => {
+        console.log(res.message)
+    })
 }
 
-const addPhrase = () => {
-    console.log(selectedPhraseId)
+const addParentPhrase = () => {
+    if (selectedPhraseId.value != null) {
+        var parentPhraseIds = [...props.currentParentPhraseIds, selectedPhraseId.value].join(",")
+        ajax.post<AnkiResponseModel>(`/parent-phrase?noteId=${props.currentLRPhraseId}&phraseIds=${parentPhraseIds}`)
+            .then(res => {
+                if (res.status == 200 && res.data.error == null) {
+                    closeDialog(selectedPhraseId.value)
+                } else {
+                    ElMessage({
+                        message: "Add parent phrase error: " + res.data.error,
+                        type: 'error',
+                    })
+                }
+            })
+            .catch(res => {
+                ElMessage({
+                    message: "Add parent phrase error: " + res.error,
+                    type: 'error',
+                })
+            })
+
+    }
 }
 
 const searchPhraseOnGoole = (event: Event) => {
@@ -88,16 +112,16 @@ const searchPhraseOnGoole = (event: Event) => {
     window.open(url, "_blank", "height=700,width=800,left=10,top=10,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no,status=yes")
 }
 
-const searchPhraseOnAnki = () =>{
+const searchPhraseOnAnki = () => {
     searchNote(searchPhraseText.value)
 }
 
-const addNewPhraseToAnki = () =>{
+const addNewPhraseToAnki = () => {
 
 }
 
-const closeDialog = () => {
-    emit("close")
+const closeDialog = (newParentPhraseId: string | null) => {
+    emit("close", newParentPhraseId)
 }
 
 </script>

@@ -4,7 +4,7 @@ export default interface LessonPhraseModel {
     Context: string,
     ContextTranslation: string,
     DateCreated: Date,
-    PhraseId: string,
+    PhraseIds: string[],
     NextImageFileName: string,
     PrevImageFileName: string,
     Tags: string[]

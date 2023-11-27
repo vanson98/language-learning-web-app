@@ -26,7 +26,7 @@
                     <source :src="SERVER_BASE_URL + '/audio?fileName=' + item.AudioFileName" type="audio/mpeg">
                 </audio>
                 <hr>
-                <el-tag effect="dark" >{{ item.PhraseId }}</el-tag>
+                <el-tag v-if="item.PhraseIds.length > 0" effect="dark" v-for="phraseId in item.PhraseIds" >{{ phraseId }}</el-tag>
                 <!-- <input autofocus :id="'input-word_' + index" class="w-100"> -->
             </el-card>
         </el-carousel-item>

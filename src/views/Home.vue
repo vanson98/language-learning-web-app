@@ -26,15 +26,16 @@
       </el-header>
       <el-main>
         <ReviewLessonWordSlider v-if="selectNoteType == 0" :carousel-ref-fun="carouselRefFn" :lesson-words="lessonWords"
-          @on-slice-change="playCardAudio">
+          @on-slice-change="onSliceChange">
         </ReviewLessonWordSlider>
         <ReviewLessonPhraseSlider v-if="selectNoteType == 1" :lesson-phrases="lessonPhrases"
-          :carousel-ref-fun="carouselRefFn" @on-slice-change="playCardAudio" @on-selected-text="onSelectedText">
+          :carousel-ref-fun="carouselRefFn" @on-slice-change="onSliceChange" @on-selected-text="searchPhrase">
         </ReviewLessonPhraseSlider>
       </el-main>
     </el-container>
   </div>
-  <SearchPhraseDialog :visible="searchPhraseDialogVisible" :search-text="searchText" @close="closeSearchPhraseDialog" />
+  <SearchPhraseDialog :visible="searchPhraseDialogVisible" :search-text="searchText" @close="closeSearchPhraseDialog"
+    :current-l-r-phrase-id="currentActivePhraseId" :current-parent-phrase-ids="currentParentPhraseIds" />
 </template>
 <script lang="ts" setup>
 import ajax from '@/libs/ajax';
@@ -60,6 +61,8 @@ const lessonWords = ref<LessonWordModel[]>([])
 const lessonPhrases = ref<LessonPhraseModel[]>([])
 const carouselRef = ref()
 const carouselRefFn = () => carouselRef
+const currentActivePhraseId = ref<string>("")
+const currentParentPhraseIds = ref<string[]>([])
 
 const searchText = ref<string>("")
 const searchPhraseDialogVisible = ref<boolean>(false)
@@ -159,7 +162,7 @@ const getLessonPhrases = () => {
             PrevImageFileName: item["fields"]["Previous Image media filename"].value,
             AudioFileName: item["fields"]["Audio clip media filename"].value as string,
             DateCreated: moment(item["fields"]["Date created"].value as string, "YYYY-MM-DD hh:mm").toDate(),
-            PhraseId: item["fields"]["PhraseId"].value as string,
+            PhraseIds: (item["fields"]["PhraseIds"].value as string).split(",").filter(id => id != ""),
           })
         })
         lessonPhrases.value.sort((a, b): number => {
@@ -170,6 +173,8 @@ const getLessonPhrases = () => {
           }
           return 0
         })
+        currentActivePhraseId.value = lessonPhrases.value[0].NoteId
+        currentParentPhraseIds.value = lessonPhrases.value[0].PhraseIds
       }
     })
     .catch(res => {
@@ -177,8 +182,13 @@ const getLessonPhrases = () => {
     })
 }
 
-const playCardAudio = (cardIndex: number) => {
+const onSliceChange = (cardIndex: number) => {
   currentActiveCardIndex = cardIndex;
+  if (selectNoteType.value == 1) {
+    currentActivePhraseId.value = lessonPhrases.value[cardIndex].NoteId
+    currentParentPhraseIds.value = lessonPhrases.value[cardIndex].PhraseIds
+  }
+
   const element = document.getElementById("card-audio-" + cardIndex)
   if (element instanceof HTMLAudioElement) {
     element.play()
@@ -189,11 +199,14 @@ const openSearchPhraseDialog = () => {
   searchPhraseDialogVisible.value = true
 }
 
-const closeSearchPhraseDialog = () => {
+const closeSearchPhraseDialog = (newPhraseId: string | null) => {
+  if (newPhraseId != null) {
+    lessonPhrases.value[currentActiveCardIndex].PhraseIds.push(newPhraseId)
+  }
   searchPhraseDialogVisible.value = false
 }
 
-const onSelectedText = (value: string | null) => {
+const searchPhrase = (value: string | null) => {
   if (value != null && value.trim() != "") {
     searchText.value = value;
     searchPhraseDialogVisible.value = true;
@@ -225,6 +238,7 @@ const showErrorAlert = (message: string) => {
     type: 'error',
   })
 }
+
 const showSuccessAlert = (message: string) => {
   ElMessage({
     message: message,
