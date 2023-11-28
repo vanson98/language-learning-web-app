@@ -53,6 +53,7 @@ import moment from 'moment';
 import ReviewLessonWordSlider from './components/ReviewLessonWordSlider.vue'
 import ReviewLessonPhraseSlider from './components/ReviewLessonPhraseSlider.vue';
 import SearchPhraseDialog from './modals/SearchPhraseDialog.vue'
+import NoteInfo from '@/models/note/NoteInfo';
 
 const videoId = ref<string>("70274007")
 const selectNoteType = ref<number>(0)
@@ -163,6 +164,8 @@ const getLessonPhrases = () => {
             AudioFileName: item["fields"]["Audio clip media filename"].value as string,
             DateCreated: moment(item["fields"]["Date created"].value as string, "YYYY-MM-DD hh:mm").toDate(),
             PhraseIds: (item["fields"]["PhraseIds"].value as string).split(",").filter(id => id != ""),
+            ParentPhrases: [],
+            IsLoadParentPhrase: false
           })
         })
         lessonPhrases.value.sort((a, b): number => {
@@ -175,6 +178,7 @@ const getLessonPhrases = () => {
         })
         currentActivePhraseId.value = lessonPhrases.value[0].NoteId
         currentParentPhraseIds.value = lessonPhrases.value[0].PhraseIds
+        getParentPhrase(lessonPhrases.value[0])
       }
     })
     .catch(res => {
@@ -184,15 +188,18 @@ const getLessonPhrases = () => {
 
 const onSliceChange = (cardIndex: number) => {
   currentActiveCardIndex = cardIndex;
+  
   if (selectNoteType.value == 1) {
-    currentActivePhraseId.value = lessonPhrases.value[cardIndex].NoteId
-    currentParentPhraseIds.value = lessonPhrases.value[cardIndex].PhraseIds
+    var lrPhrase = lessonPhrases.value[cardIndex];
+    currentActivePhraseId.value = lrPhrase.NoteId
+    currentParentPhraseIds.value = lrPhrase.PhraseIds
+    getParentPhrase(lrPhrase)
   }
-
-  const element = document.getElementById("card-audio-" + cardIndex)
-  if (element instanceof HTMLAudioElement) {
-    element.play()
-  }
+  
+  // const element = document.getElementById("card-audio-" + cardIndex)
+  // if (element instanceof HTMLAudioElement) {
+  //   element.play()
+  // }
 }
 
 const openSearchPhraseDialog = () => {
@@ -231,6 +238,24 @@ window.addEventListener('keyup', (e) => {
   }
 
 });
+
+const getParentPhrase = (lrPhrase: LessonPhraseModel)=>{
+  if(lrPhrase.PhraseIds.length > 0 && !lrPhrase.IsLoadParentPhrase){
+    ajax.get<AnkiResponseModel>(`/notes?ids=${lrPhrase.PhraseIds.join(",")}`).then(res =>{
+      debugger
+      if(res.data.error == null && Array.isArray(res.data.result)){
+        res.data.result.forEach((item : any)=>{
+          lrPhrase.ParentPhrases.push({
+            NoteId: item.noteId,
+            Front: item["fields"]["Front"].value as string,
+            Meaning: item["fields"]["Meaning"].value as string
+          })
+        })
+        lrPhrase.IsLoadParentPhrase = true;
+      }
+    })
+  }
+}
 
 const showErrorAlert = (message: string) => {
   ElMessage({

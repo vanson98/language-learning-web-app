@@ -25,9 +25,13 @@
                 <audio :id="'card-audio-' + index">
                     <source :src="SERVER_BASE_URL + '/audio?fileName=' + item.AudioFileName" type="audio/mpeg">
                 </audio>
-                <hr>
-                <el-tag v-if="item.PhraseIds.length > 0" effect="dark" v-for="phraseId in item.PhraseIds" >{{ phraseId }}</el-tag>
-                <!-- <input autofocus :id="'input-word_' + index" class="w-100"> -->
+                <template v-for="phrase in item.ParentPhrases">
+                    <hr>
+                    <el-tag>{{ phrase.NoteId }}</el-tag>
+                    <br>
+                    <b v-html="phrase.Front"></b>
+                    <div v-html="phrase.Meaning"></div>
+                </template>
             </el-card>
         </el-carousel-item>
     </el-carousel>

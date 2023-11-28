@@ -1,3 +1,5 @@
+import NoteInfo from "../note/NoteInfo"
+
 export default interface LessonPhraseModel {
     NoteId: string,
     AudioFileName: string,
@@ -8,4 +10,10 @@ export default interface LessonPhraseModel {
     NextImageFileName: string,
     PrevImageFileName: string,
     Tags: string[]
+    ParentPhrases: {
+        NoteId: string,
+        Front: string,
+        Meaning: string
+    }[] ,
+    IsLoadParentPhrase: boolean
 }
