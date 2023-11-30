@@ -1,7 +1,7 @@
 <template>
   <div>
     <el-container>
-      <el-header>
+      <el-header style="height: 8vh;">
         <el-row class="mt-2">
           <el-col :span="3">
             <ElInput v-model="videoId" class="pe-2" />
@@ -24,7 +24,7 @@
           </el-col>
         </el-row>
       </el-header>
-      <el-main>
+      <el-main style="height: 90vh;">
         <ReviewLessonWordSlider v-if="selectNoteType == 0" :carousel-ref-fun="carouselRefFn" :lesson-words="lessonWords"
           @on-slice-change="onSliceChange">
         </ReviewLessonWordSlider>
@@ -157,7 +157,7 @@ const getLessonPhrases = () => {
           lessonPhrases.value.push({
             NoteId: item.noteId,
             Tags: item.tags,
-            Context: item["fields"].Context.value,
+            Context: item["fields"].Context.value as string,
             ContextTranslation: item["fields"]["Context translation"].value as string,
             NextImageFileName: item["fields"]["Next Image media filename"].value,
             PrevImageFileName: item["fields"]["Previous Image media filename"].value,
@@ -242,7 +242,6 @@ window.addEventListener('keyup', (e) => {
 const getParentPhrase = (lrPhrase: LessonPhraseModel)=>{
   if(lrPhrase.PhraseIds.length > 0 && !lrPhrase.IsLoadParentPhrase){
     ajax.get<AnkiResponseModel>(`/notes?ids=${lrPhrase.PhraseIds.join(",")}`).then(res =>{
-      debugger
       if(res.data.error == null && Array.isArray(res.data.result)){
         res.data.result.forEach((item : any)=>{
           lrPhrase.ParentPhrases.push({
@@ -285,9 +284,12 @@ body {
 .word-card-box h3 {
   margin: 0;
 }
-
+.card-images{
+  display: flex;
+  justify-content: space-between;
+  grid-gap: 7px;
+}
 .card-images img {
   width: 50%;
-  padding: 8px;
 }
 </style>
