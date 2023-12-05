@@ -1,19 +1,11 @@
 <template>
-    <el-dialog v-model="visible" title="Search Phrase" width="30%" @open="onDialogOpen">
+    <el-dialog v-model="visible" title="Search Phrase" width="60%" @open="onDialogOpen">
         <div>
-            <el-input v-model="searchPhraseText" @keyup.enter="() => searchNote(searchPhraseText)" placeholder="Phrase Text"
-                :tabindex="0"></el-input>
-            <div class="mt-2">
-                <el-input v-model="phraseMeaning" placeholder="Phrase Meaning"></el-input>
-            </div>
-            <div class="mt-2 mb-2">
-                <el-button type="primary" @click="searchPhraseOnGoole">Google Search</el-button>
-                <el-button type="primary" @click="searchPhraseOnAnki">Anki Search</el-button>
-                <el-button type="primary" @click="addNewPhraseToAnki">Add Anki Phrase</el-button>
-            </div>
-            <div>
-                <span>Total anki search result: {{ totalAnkiSearchResult }}</span>
-            </div>
+            <el-input v-model="searchPhraseText" @keyup.enter="() => searchNote(searchPhraseText)"
+                @keyup.ctrl.space="searchPhraseOnGoole" placeholder="Phrase Text" :tabindex="0">
+            </el-input>
+
+            <label class="mt-2">Total anki search result: {{ totalAnkiSearchResult }}</label>
             <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" remote :remote-method="searchNote" clearable
                 :options="phraseOptions" :loading="loading" placeholder="Please enter phrase name" filterable :tabindex="1">
                 <template #default="{ item }">
@@ -24,11 +16,13 @@
                 </template>
             </el-select-v2>
 
+            <label class="mt-2">Google Meaning</label>
+            <el-input v-model="googlePhraseMeaning" placeholder="Phrase Meaning"></el-input>
         </div>
         <template #footer>
             <span class="dialog-footer">
                 <el-button @click="() => closeDialog(null)">Cancel</el-button>
-                <el-button type="primary" @click="addParentPhrase">
+                <el-button type="primary" @click="confirm">
                     Confirm
                 </el-button>
             </span>
@@ -40,12 +34,13 @@ import ajax from '@/libs/ajax';
 import AnkiResponseModel from '@/models/response/AnkiResponseModel';
 import { ElDialog, ElButton, ElSelectV2, ElInput, ElMessage } from 'element-plus';
 import { OptionType } from 'element-plus/es/components/select-v2/src/select.types';
+import { de } from 'element-plus/es/locale';
 import { ref } from 'vue'
 const props = defineProps<{
     visible: boolean,
-    searchText: string,
-    currentLRPhraseId: string,
-    currentParentPhraseIds: string[]
+    searchText: string | null | undefined,
+    currentLRPhraseId: string | null | undefined,
+    currentParentPhraseIds: string[] | null | undefined
 }>()
 const emit = defineEmits(["close"])
 
@@ -53,12 +48,18 @@ const selectedPhraseId = ref()
 const loading = ref(false);
 const phraseOptions = ref<OptionType[]>([]);
 const searchPhraseText = ref("")
-const phraseMeaning = ref("")
+const googlePhraseMeaning = ref("")
 const totalAnkiSearchResult = ref(0)
 
 const onDialogOpen = () => {
-    searchNote(props.searchText)
-    searchPhraseText.value = props.searchText
+    searchPhraseText.value = ""
+    googlePhraseMeaning.value = ""
+
+    if (props.searchText != null) {
+        searchNote(props.searchText)
+        searchPhraseText.value = props.searchText.replace(".","").replace(",","")
+    }
+
 }
 
 const searchNote = (query: string) => {
@@ -82,13 +83,21 @@ const searchNote = (query: string) => {
     })
 }
 
-const addParentPhrase = () => {
+const confirm = () => {
     if (selectedPhraseId.value != null) {
-        var parentPhraseIds = [...props.currentParentPhraseIds, selectedPhraseId.value].join(",")
+        addMoreParentPhrase(selectedPhraseId.value)
+    } else {
+        addNewPhraseToAnki()
+    }
+}
+
+const addMoreParentPhrase = (phraseId: string) => {
+    if (props.currentParentPhraseIds) {
+        var parentPhraseIds = [...props.currentParentPhraseIds, phraseId].join(",")
         ajax.post<AnkiResponseModel>(`/parent-phrase?noteId=${props.currentLRPhraseId}&phraseIds=${parentPhraseIds}`)
             .then(res => {
                 if (res.status == 200 && res.data.error == null) {
-                    closeDialog(selectedPhraseId.value)
+                    closeDialog(phraseId)
                 } else {
                     ElMessage({
                         message: "Add parent phrase error: " + res.data.error,
@@ -112,11 +121,24 @@ const searchPhraseOnGoole = (event: Event) => {
     window.open(url, "_blank", "height=700,width=800,left=10,top=10,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no,status=yes")
 }
 
-const searchPhraseOnAnki = () => {
-    searchNote(searchPhraseText.value)
-}
-
 const addNewPhraseToAnki = () => {
+    if (searchPhraseText.value.trim() != "") {
+        ajax.post<AnkiResponseModel>("/phrase", JSON.stringify({
+            Front: searchPhraseText.value,
+            Meaning: googlePhraseMeaning.value
+        })).then(res => {
+            if (res.data.error != null) {
+                ElMessage({
+                    message: res.data.error,
+                    type: 'error',
+                })
+            } else {
+                addMoreParentPhrase(res.data.result as string)
+            }
+        }).catch(res => {
+            console.log(res)
+        })
+    }
 
 }
 

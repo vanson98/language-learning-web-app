@@ -14,7 +14,7 @@ const globalOptions = {
     modules: {
       toolbar: ['bold', 'italic', 'underline']
     },
-    spellcheck: false
+    spellcheck: false,
   }
 
 const app = createApp(App);
