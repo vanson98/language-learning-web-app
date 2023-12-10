@@ -2,14 +2,15 @@
   <el-row>
     <el-col :span="4">
       <el-input v-model="searchText" placeholder="Serch Phrase" @keyup.enter="getLessonWord"></el-input>
-     
+
     </el-col>
     <el-col :span="4">
-      <el-button @click="getLessonWord">Reload Data</el-button>
+      <div class="ms-5">
+        <el-button @click="getLessonWord" type="primary">Load Data</el-button>
+      </div>
     </el-col>
   </el-row>
   <el-row>
-
     <el-col :span="14">
       <el-table :data="lessonWords" ref="singleTableRef" style="width: 100%;height: 85vh;" highlight-current-row
         @current-change="handleCurrentRowChange">
@@ -25,13 +26,17 @@
       </el-table>
     </el-col>
     <el-col :span="10" v-if="currentRow != null">
-      <div class="phrase-info-box">
+      <div class="word-info-box">
         <div class="card-images">
           <img :src="SERVER_BASE_URL + '/image?fileName=' + currentRow.PrevImageFileName">
           <img :src="SERVER_BASE_URL + '/image?fileName=' + currentRow.NextImageFileName">
         </div>
         <hr>
-        <div class="d-flex justify-content-end">
+        <div class="d-flex justify-content-between">
+          <div>
+            <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
+
+          </div>
           <el-button @click="() => deleteWord(currentRow!.NoteId)" type="danger">Remove</el-button>
         </div>
         <hr>
@@ -50,12 +55,19 @@
           </div>
           <div class="mt-2">
             <label>Word Definition</label>
-            <el-input  autosize type="textarea" v-model="currentRow.WordDefinition"></el-input>
+            <el-input autosize type="textarea" v-model="currentRow.WordDefinition"></el-input>
           </div>
 
           <div class="mt-2">
-            <label>Context</label>
-            <QuillEditor v-model:content="currentRow.Context" toolbar="full" content-type="html"
+
+            <div class="d-flex justify-content-start">
+              <label>Context</label>
+              <div class="ms-5 mb-2">
+                <el-button @click="highLightWord" type="warning">Highlight</el-button>
+              </div>
+
+            </div>
+            <QuillEditor v-model:content="currentRow.Context" toolbar="minimal" content-type="html"
               style="margin-bottom: 2px;">
 
             </QuillEditor>
@@ -90,6 +102,7 @@ import '@vueup/vue-quill/dist/vue-quill.snow.css';
 
 const props = defineProps<{
   videoId: string,
+  autoPlayAudio: boolean
 }>()
 
 const searchText = ref<string>("")
@@ -147,13 +160,16 @@ const getLessonWord = () => {
 
 const handleCurrentRowChange = (cr: LessonWordModel, ocr: LessonWordModel) => {
   currentRow.value = cr
-  onCurrentPhraseRowChange(cr, ocr)
+
+  onCurrentPhraseRowChange(ocr)
 }
 
-const onCurrentPhraseRowChange = (currectActivePhrase: LessonWordModel | null, oldActivePhrase: LessonWordModel | null) => {
-
-  if (oldActivePhrase) {
-    updateLRWord(oldActivePhrase)
+const onCurrentPhraseRowChange = (prevRow: LessonWordModel | null) => {
+  if (prevRow) {
+    updateLRWord(prevRow)
+  }
+  if (props.autoPlayAudio) {
+    playAudio(prevRow)
   }
 }
 
@@ -184,10 +200,12 @@ const deleteWord = (noteId: string) => {
     .then(() => {
       ajax.get<AnkiResponseModel>(`delete-note?noteId=${noteId}&audioFileName=${currentRow.value?.AudioFileName}&nextImageFileName=${currentRow.value?.NextImageFileName}&prevImageFileName=${currentRow.value?.PrevImageFileName}`).then(res => {
         if (res.data.error == null) {
+
           ElMessage({
             type: 'success',
             message: 'Delete completed',
           })
+          lessonWords.value = lessonWords.value.filter(wordItem => wordItem.NoteId != currentRow.value?.NoteId)
         }
 
       }).catch(res => {
@@ -196,22 +214,71 @@ const deleteWord = (noteId: string) => {
     }).catch(() => { })
 }
 
-window.addEventListener('keyup', (e) => {
-  var targetElement = e.target;
-  if ((targetElement instanceof HTMLInputElement)) {
-    return
+const playAudio = (previousRow: LessonWordModel | null) => {
+  var currentAudioElement = document.getElementById("card-audio-" + currentRow.value?.NoteId)
+  var previousAudioElement = document.getElementById("card-audio-" + previousRow?.NoteId)
+  if (previousAudioElement instanceof HTMLAudioElement) {
+    previousAudioElement.pause()
   }
-  // if (e.key == 'ArrowRight' && carouselRef.value != null) {
-  //   carouselRef.value.next()
-  // }
-  // if (e.key == 'ArrowLeft' && carouselRef.value != null) {
-  //   carouselRef.value.prev()
-  // }
-  if (e.key == "r" || e.key == "R") {
-    var audioElement = document.getElementById("card-audio-" + currentRow.value?.NoteId)
-    if (audioElement instanceof HTMLAudioElement) {
-      audioElement.play()
+  if (currentAudioElement instanceof HTMLAudioElement) {
+    currentAudioElement.load()
+    currentAudioElement.play()
+  }
+}
+
+const highLightWord = () => {
+  var selectText = window.getSelection()?.toString()
+  if (currentRow.value != null && selectText != null) {
+    var highlightText = `<span style="background-color: rgb(255, 170, 0);">${selectText}</span>`
+    currentRow.value.Context = currentRow.value.Context.replace(selectText, highlightText)
+  }
+}
+
+
+window.addEventListener('keydown', (e) => {
+  var targetElement = e.target as Element
+
+  if (!(targetElement instanceof HTMLInputElement) && targetElement.className != "ql-editor") {
+    if (e.key == "ArrowDown" && currentRow.value != null) {
+      var currentRowIndex = lessonWords.value.indexOf(currentRow.value)
+      if (currentRowIndex == lessonWords.value.length - 1) {
+        return
+      }
+      singleTableRef.value?.setCurrentRow(lessonWords.value[currentRowIndex + 1])
+    }
+    if (e.key == "ArrowUp" && currentRow.value != null) {
+      var currentRowIndex = lessonWords.value.indexOf(currentRow.value)
+      if (currentRowIndex == 0) {
+        return
+      }
+      singleTableRef.value?.setCurrentRow(lessonWords.value[currentRowIndex - 1])
+    }
+
+  }
+
+  if (targetElement.className == "ql-editor") {
+   
+    if (e.altKey && e.key == 'a') {
+      debugger
+      highLightWord()
     }
   }
+
 });
+
 </script>
+
+
+<style>
+.word-info-box {
+  width: 100%;
+  height: 90vh;
+  border: 1px solid;
+  padding: 10px;
+  overflow: scroll;
+}
+
+.el-table {
+  --el-table-current-row-bg-color: #bfe1fc
+}
+</style>

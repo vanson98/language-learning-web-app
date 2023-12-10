@@ -1,15 +1,15 @@
 <template>
     <el-row>
         <el-col :span="4">
-            <el-input v-model="searchText" placeholder="Serch Phrase"
-                @keyup.enter="() => getLessonPhrases(searchText)"></el-input>
+            <el-input v-model="searchText" placeholder="Serch Phrase" @keyup.enter="getLessonPhrases"></el-input>
         </el-col>
-        <SearchPhraseDialog :visible="searchPhraseDialogVisible" :search-text="searchTextPhrase"
-            @close="closeSearchPhraseDialog" :current-l-r-phrase-id="currentRow?.NoteId"
-            :current-parent-phrase-ids="currentRow?.PhraseIds" />
+        <el-col :span="4">
+            <div class="ms-5">
+                <el-button @click="getLessonPhrases" type="primary">Load Data</el-button>
+            </div>
+        </el-col>
     </el-row>
     <el-row>
-
         <el-col :span="14">
             <el-table :data="lessonPhrases" ref="singleTableRef" style="width: 100%;height: 85vh;" highlight-current-row
                 @current-change="handleCurrentRowChange">
@@ -31,12 +31,16 @@
                     <img :src="SERVER_BASE_URL + '/image?fileName=' + currentRow.NextImageFileName">
                 </div>
                 <hr>
-                <div class="d-flex justify-content-end">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
+                        <el-button @click="highLightWord" type="warning">Highlight</el-button>
+                    </div>
                     <el-button @click="() => deletePhrase(currentRow!.NoteId)" type="danger">Remove</el-button>
                 </div>
                 <hr>
                 <div>
-                    <QuillEditor v-model:content="currentRow.Context" toolbar="full" content-type="html"
+                    <QuillEditor v-model:content="currentRow.Context" toolbar="minimal" content-type="html"
                         style="margin-bottom: 2px;">
 
                     </QuillEditor>
@@ -59,10 +63,13 @@
             </div>
         </el-col>
     </el-row>
+    <SearchPhraseDialog :visible="searchPhraseDialogVisible" :search-text="searchTextPhrase"
+        @close="closeSearchPhraseDialog" :current-l-r-phrase-id="currentRow?.NoteId"
+        :current-parent-phrase-ids="currentRow?.PhraseIds" />
 </template>
 
 <script lang="ts" setup>
-import { ElTag, ElRow, ElCol, ElTable, ElTableColumn, ElButton, ElMessageBox, ElMessage } from 'element-plus'
+import { ElTag, ElRow, ElCol, ElTable, ElTableColumn, ElButton, ElMessageBox, ElMessage, ElInput } from 'element-plus'
 import SERVER_BASE_URL from '../../libs/url'
 import LRPhraseModel from '../../models/lesson/LRPhraseModel'
 import { onMounted, ref } from 'vue';
@@ -74,24 +81,24 @@ import moment from 'moment';
 import SearchPhraseDialog from '../modals/SearchPhraseDialog.vue'
 
 const props = defineProps<{
-    videoId: string
+    videoId: string,
+    autoPlayAudio: boolean
 }>()
 
 const lessonPhrases = ref<LRPhraseModel[]>([]);
 const currentRow = ref<LRPhraseModel | null>(null)
 const singleTableRef = ref<InstanceType<typeof ElTable>>()
-
 const searchText = ref<string>("")
 const searchTextPhrase = ref<string | undefined>("")
 const searchPhraseDialogVisible = ref<boolean>(false)
 
 
 onMounted(() => {
-    getLessonPhrases("")
+    getLessonPhrases()
 })
 
-const getLessonPhrases = (searchContext: string) => {
-    ajax.get<AnkiResponseModel>(`/lesson-phrases?vid=${props.videoId}&searchContext=${searchContext}`)
+const getLessonPhrases = () => {
+    ajax.get<AnkiResponseModel>(`/lesson-phrases?vid=${props.videoId}&searchContext=${searchText.value}`)
         .then(res => {
             if (res.data.error != null) {
                 ElMessage({
@@ -139,34 +146,74 @@ const handleCurrentRowChange = (cr: LRPhraseModel, ocr: LRPhraseModel) => {
     onCurrentPhraseRowChange(cr, ocr)
 }
 
-const onCurrentPhraseRowChange = (currectActivePhrase: LRPhraseModel | null, oldActivePhrase: LRPhraseModel | null) => {
-    if (currectActivePhrase != null) {
-        getParentPhrase(currectActivePhrase)
+const onCurrentPhraseRowChange = (currectRow: LRPhraseModel | null, previousRow: LRPhraseModel | null) => {
+    if (currectRow != null) {
+        getParentPhrase(currectRow)
     }
-    if (oldActivePhrase) {
-        updateLRPhrase(oldActivePhrase)
+    if (previousRow) {
+        updateLRPhrase(previousRow)
+    }
+    if (props.autoPlayAudio) {
+        playAudio(previousRow)
     }
 }
 
-// =================== SEARCH PHRASE AND AUDIO ======================
+// =================== SEARCH PHRASE AND PLAY AUDIO ======================
 
 window.addEventListener('keydown', (e) => {
-    var targetElement = e.target
-    if (!(targetElement instanceof HTMLInputElement)) {
-        if (e.key == 'r' && currentRow.value != null) {
-            var audioElement = document.getElementById("card-audio-" + currentRow.value?.NoteId)
-            if (audioElement instanceof HTMLAudioElement) {
-                audioElement.play()
+    var targetElement = e.target as Element
+    if (!(targetElement instanceof HTMLInputElement) && targetElement.className != "ql-editor") {
+        if(e.key == "ArrowDown" && currentRow.value != null){
+            var currentRowIndex = lessonPhrases.value.indexOf(currentRow.value)
+            if(currentRowIndex == lessonPhrases.value.length -1){
+                return
             }
+            singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex+1])
         }
+        if(e.key == "ArrowUp" && currentRow.value != null){
+            var currentRowIndex = lessonPhrases.value.indexOf(currentRow.value)
+            if(currentRowIndex == 0){
+                return
+            }
+            singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex-1])
+        }
+        
+    }
+    if(targetElement.className == "ql-editor"){
         if (e.altKey && e.key == 'q') {
             searchTextPhrase.value = window.getSelection()?.toString()
             searchPhraseDialogVisible.value = true
         }
+        if (e.altKey && e.key == 'a') {
+            highLightWord()
+        }
     }
-
-
 });
+
+
+
+const highLightWord = () => {
+    var selectText = window.getSelection()?.toString()
+    if (currentRow.value != null && selectText != null) {
+        var highlightText = `<span style="background-color: rgb(255, 170, 0);">${selectText}</span>`
+        currentRow.value.Context = currentRow.value.Context.replace(selectText, highlightText)
+    }
+}
+
+
+const playAudio = (previousRow: LRPhraseModel | null) => {
+    var currentAudioElement = document.getElementById("card-audio-" + currentRow.value?.NoteId)
+    var previousAudioElement = document.getElementById("card-audio-" + previousRow?.NoteId)
+    if (previousAudioElement instanceof HTMLAudioElement) {
+        previousAudioElement.pause()
+    }
+    if (currentAudioElement instanceof HTMLAudioElement) {
+        currentAudioElement.load()
+        currentAudioElement.play()
+    }
+}
+
+
 
 const closeSearchPhraseDialog = (newPhraseId: string | null) => {
     if (newPhraseId != null && currentRow.value != null) {
@@ -229,6 +276,7 @@ const deletePhrase = (noteId: string) => {
                         type: 'success',
                         message: 'Delete completed',
                     })
+                    lessonPhrases.value = lessonPhrases.value.filter(wordItem => wordItem.NoteId != currentRow.value?.NoteId)
                 }
 
             }).catch(res => {
@@ -242,13 +290,18 @@ const deletePhrase = (noteId: string) => {
 <style>
 .phrase-info-box {
     width: 100%;
-    height: 100%;
+    height: 90vh;
     border: 1px solid;
     padding: 10px;
+    overflow: scroll;
 }
 
 .my-toolbar {
     height: 0;
     padding: 0 !important;
+}
+
+.el-table  {
+  --el-table-current-row-bg-color: #bfe1fc
 }
 </style>
