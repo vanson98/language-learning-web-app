@@ -9,8 +9,8 @@
             </div>
         </el-col>
     </el-row>
-    <el-row>
-        <el-col :span="14">
+    <el-row style="height: 100%;">
+        <el-col :span="14" style="height: 100%;">
             <el-table :data="lessonPhrases" ref="singleTableRef" style="width: 100%;height: 85vh;" highlight-current-row
                 @current-change="handleCurrentRowChange">
                 <el-table-column type="index" width="50" />
@@ -24,7 +24,7 @@
                 </el-table-column>
             </el-table>
         </el-col>
-        <el-col :span="10" v-if="currentRow != null">
+        <el-col :span="10" style="height: 100%;" v-if="currentRow != null">
             <div class="phrase-info-box">
                 <div class="card-images">
                     <img :src="SERVER_BASE_URL + '/image?fileName=' + currentRow.PrevImageFileName">
@@ -54,11 +54,14 @@
                     <br>
                 </div>
                 <template v-for="phrase in currentRow.ParentPhrases">
-                    <hr>
-                    <el-tag>{{ phrase.NoteId }}</el-tag>
-                    <br>
-                    <b v-html="phrase.Front"></b>
-                    <div v-html="phrase.Meaning"></div>
+                    <div style="height: auto; margin-bottom: 8px;">
+                        <hr>
+                        <el-tag>{{ phrase.NoteId }}</el-tag>
+                        <br>
+                        <b v-html="phrase.Front"></b>
+                        <div v-html="phrase.Meaning"></div>
+                    </div>
+
                 </template>
             </div>
         </el-col>
@@ -163,23 +166,23 @@ const onCurrentPhraseRowChange = (currectRow: LRPhraseModel | null, previousRow:
 window.addEventListener('keydown', (e) => {
     var targetElement = e.target as Element
     if (!(targetElement instanceof HTMLInputElement) && targetElement.className != "ql-editor") {
-        if(e.key == "ArrowDown" && currentRow.value != null){
+        if (e.key == "ArrowDown" && currentRow.value != null) {
             var currentRowIndex = lessonPhrases.value.indexOf(currentRow.value)
-            if(currentRowIndex == lessonPhrases.value.length -1){
+            if (currentRowIndex == lessonPhrases.value.length - 1) {
                 return
             }
-            singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex+1])
+            singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex + 1])
         }
-        if(e.key == "ArrowUp" && currentRow.value != null){
+        if (e.key == "ArrowUp" && currentRow.value != null) {
             var currentRowIndex = lessonPhrases.value.indexOf(currentRow.value)
-            if(currentRowIndex == 0){
+            if (currentRowIndex == 0) {
                 return
             }
-            singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex-1])
+            singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex - 1])
         }
-        
+
     }
-    if(targetElement.className == "ql-editor"){
+    if (targetElement.className == "ql-editor") {
         if (e.altKey && e.key == 'q') {
             searchTextPhrase.value = window.getSelection()?.toString()
             searchPhraseDialogVisible.value = true
@@ -290,7 +293,7 @@ const deletePhrase = (noteId: string) => {
 <style>
 .phrase-info-box {
     width: 100%;
-    height: 90vh;
+    height: 100%;
     border: 1px solid;
     padding: 10px;
     overflow: scroll;
@@ -301,7 +304,7 @@ const deletePhrase = (noteId: string) => {
     padding: 0 !important;
 }
 
-.el-table  {
-  --el-table-current-row-bg-color: #bfe1fc
+.el-table {
+    --el-table-current-row-bg-color: #bfe1fc
 }
 </style>
