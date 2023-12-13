@@ -48,7 +48,7 @@ import ReviewLessonWord from './components/ReviewLessonWord.vue'
 import ReviewLessonPhrase from './components/ReviewLessonPhrase.vue';
 
 
-const videoId = ref<string>("70274007")
+const videoId = ref<string>("")
 const selectNoteType = ref<number>(0)
 const importingLRData = ref(false)
 const autoPlayAudio = ref(false)

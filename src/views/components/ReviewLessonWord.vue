@@ -33,10 +33,7 @@
         </div>
         <hr>
         <div class="d-flex justify-content-between">
-          <div>
-            <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
-
-          </div>
+          
           <el-button @click="() => deleteWord(currentRow!.NoteId)" type="danger">Remove</el-button>
         </div>
         <hr>
@@ -63,7 +60,9 @@
             <div class="d-flex justify-content-start">
               <label>Context</label>
               <div class="ms-5 mb-2">
+                <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
                 <el-button @click="highLightWord" type="warning">Highlight</el-button>
+                
               </div>
 
             </div>
