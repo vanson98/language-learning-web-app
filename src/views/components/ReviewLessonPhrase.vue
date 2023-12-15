@@ -24,7 +24,7 @@
                 </el-table-column>
             </el-table>
         </el-col>
-        <el-col :span="10" style="height: 100%;" v-if="currentRow != null">
+        <el-col :span="10" style="height: 100%;" v-if="currentRow">
             <div class="phrase-info-box">
                 <div class="card-images">
                     <img :src="SERVER_BASE_URL + '/image?fileName=' + currentRow.PrevImageFileName">
@@ -36,7 +36,11 @@
                         <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
                         <el-button @click="highLightWord" type="warning">Highlight</el-button>
                     </div>
-                    <el-button @click="() => deletePhrase(currentRow!.NoteId)" type="danger">Remove</el-button>
+                    <div>
+                        <el-button @click="() => updateLRPhrase(currentRow)" type="primary">Save</el-button>
+                        <el-button @click="() => deletePhrase(currentRow!.NoteId)" type="danger">Remove</el-button>
+                    </div>
+
                 </div>
                 <hr>
                 <div>
@@ -250,16 +254,18 @@ const getParentPhrase = (lrPhrase: LRPhraseModel) => {
     }
 }
 
-const updateLRPhrase = (lrPhrase: LRPhraseModel) => {
-    ajax.post<AnkiResponseModel>("/lr-phrase", JSON.stringify({
-        NoteId: lrPhrase.NoteId,
-        Context: lrPhrase.Context,
-        "Context translation": lrPhrase.ContextTranslation,
-        PhraseIds: lrPhrase.PhraseIds.toString().replace("[]", "") as string
-    })).then(res => {
-    }).catch(res => {
-        console.error(res)
-    })
+const updateLRPhrase = (lrPhrase: LRPhraseModel | null) => {
+    if (lrPhrase !== null) {
+        ajax.post<AnkiResponseModel>("/lr-phrase", JSON.stringify({
+            NoteId: lrPhrase.NoteId,
+            Context: lrPhrase.Context,
+            "Context translation": lrPhrase.ContextTranslation,
+            PhraseIds: lrPhrase.PhraseIds.toString().replace("[]", "") as string
+        })).then(res => {
+        }).catch(res => {
+            console.error(res)
+        })
+    }
 }
 
 const deletePhrase = (noteId: string) => {

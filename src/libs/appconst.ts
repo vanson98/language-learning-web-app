@@ -5,6 +5,6 @@ const AppConsts = {
     encrptedAuthTokenName: "enc_auth_token",
     tokenName: "Abp.AuthToken",
   },
-  appBaseUrl: "http://localhost:8080",
+  appBaseUrl: "http://localhost:8081",
 };
 export default AppConsts;
