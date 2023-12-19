@@ -33,8 +33,8 @@
                 <hr>
                 <div class="d-flex justify-content-between">
                     <div>
-                        <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
                         <el-button @click="highLightWord" type="warning">Highlight</el-button>
+                        <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
                     </div>
                     <div>
                         <el-button @click="() => updateLRPhrase(currentRow)" type="primary">Save</el-button>
@@ -64,8 +64,8 @@
                         <br>
                         <b v-html="phrase.Front"></b>
                         <div v-html="phrase.Meaning"></div>
+                        <i v-html="phrase.Example"></i>
                     </div>
-
                 </template>
             </div>
         </el-col>
@@ -243,7 +243,8 @@ const getParentPhrase = (lrPhrase: LRPhraseModel) => {
                         lrPhrase.ParentPhrases.push({
                             NoteId: item.noteId,
                             Front: item["fields"]["Front"].value as string,
-                            Meaning: item["fields"]["Meaning"].value as string
+                            Meaning: item["fields"]["Meaning"].value as string,
+                            Example: item["fields"]["Example"].value as string
                         })
                         lrPhrase.PhraseIds.push(item.noteId)
                     }
@@ -310,7 +311,7 @@ const deletePhrase = (noteId: string) => {
     padding: 0 !important;
 }
 
-.el-table {
-    --el-table-current-row-bg-color: #bfe1fc
-}
+
+
+
 </style>

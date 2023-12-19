@@ -33,7 +33,7 @@
         </div>
         <hr>
         <div class="d-flex justify-content-between">
-          
+
           <el-button @click="() => deleteWord(currentRow!.NoteId)" type="danger">Remove</el-button>
         </div>
         <hr>
@@ -59,10 +59,13 @@
 
             <div class="d-flex justify-content-start">
               <label>Context</label>
-              <div class="ms-5 mb-2">
-                <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
-                <el-button @click="highLightWord" type="warning">Highlight</el-button>
-                
+              <div class="ms-5 mb-2 d-flex justify-content-between flex-grow-1" >
+                <div>
+                  <el-button @click="highLightWord" type="warning">Highlight</el-button>
+                </div>
+                <div>
+                  <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
+                </div>
               </div>
 
             </div>
@@ -158,13 +161,12 @@ const getLessonWord = () => {
     })
 }
 
-const handleCurrentRowChange = (cr: LessonWordModel, ocr: LessonWordModel) => {
-  currentRow.value = cr
-
-  onCurrentPhraseRowChange(ocr)
+const handleCurrentRowChange = (crtRow: LessonWordModel, previousRow: LessonWordModel) => {
+  currentRow.value = crtRow
+  onCurrentRowChange(previousRow)
 }
 
-const onCurrentPhraseRowChange = (prevRow: LessonWordModel | null) => {
+const onCurrentRowChange = (prevRow: LessonWordModel | null) => {
   if (prevRow) {
     updateLRWord(prevRow)
   }
@@ -177,6 +179,8 @@ const onCurrentPhraseRowChange = (prevRow: LessonWordModel | null) => {
 const updateLRWord = (lrWord: LessonWordModel) => {
   ajax.post<AnkiResponseModel>("/lr-word", JSON.stringify({
     NoteId: lrWord.NoteId,
+    Lemma: lrWord.Lemma,
+    Word: lrWord.Word,
     IPA: lrWord.IPA,
     "Word definition": lrWord.WordDefinition,
     Context: lrWord.Context,
@@ -237,8 +241,11 @@ const highLightWord = () => {
 
 window.addEventListener('keydown', (e) => {
   var targetElement = e.target as Element
-
-  if (!(targetElement instanceof HTMLInputElement) && targetElement.className != "ql-editor") {
+  if (!(targetElement instanceof HTMLInputElement)
+    && targetElement.className != "ql-editor"
+    && targetElement.className != "el-input__inner"
+    && targetElement.className != "el-textarea__inner"
+  ) {
     if (e.key == "ArrowDown" && currentRow.value != null) {
       var currentRowIndex = lessonWords.value.indexOf(currentRow.value)
       if (currentRowIndex == lessonWords.value.length - 1) {
@@ -257,7 +264,7 @@ window.addEventListener('keydown', (e) => {
   }
 
   if (targetElement.className == "ql-editor") {
-   
+
     if (e.altKey && e.key == 'a') {
       debugger
       highLightWord()
@@ -276,9 +283,5 @@ window.addEventListener('keydown', (e) => {
   border: 1px solid;
   padding: 10px;
   overflow: scroll;
-}
-
-.el-table {
-  --el-table-current-row-bg-color: #bfe1fc
 }
 </style>

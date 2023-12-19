@@ -1,23 +1,35 @@
 <template>
     <el-dialog v-model="visible" title="Search Phrase" width="60%" @open="onDialogOpen">
         <div>
-            <el-input v-model="searchPhraseText" @keyup.enter="() => searchNote(searchPhraseText)"
-                @keyup.ctrl.space="searchPhraseOnGoole" placeholder="Phrase Text" :tabindex="0">
-            </el-input>
-
-            <label class="mt-2">Total anki search result: {{ totalAnkiSearchResult }}</label>
-            <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" remote :remote-method="searchNote" clearable
-                :options="phraseOptions" :loading="loading" placeholder="Please enter phrase name" filterable :tabindex="1">
-                <template #default="{ item }">
-                    <b v-html="item.label" class="me-2"></b>
-                    <span>&#8594; </span>
-                    <span v-html="item.options">
-                    </span>
-                </template>
-            </el-select-v2>
-
-            <label class="mt-2">Google Meaning</label>
-            <el-input v-model="googlePhraseMeaning" placeholder="Phrase Meaning"></el-input>
+            <div>
+                <el-input v-model="searchPhraseText" @keyup.enter="() => searchNote(searchPhraseText)"
+                    @keyup.ctrl.space="searchPhraseOnGoole" placeholder="Phrase Text" :tabindex="0">
+                </el-input>
+                <label class="mt-2">Total anki search result: {{ totalAnkiSearchResult }}</label>
+                <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" remote :remote-method="searchNote" clearable
+                    :options="phraseOptions" :loading="loading" placeholder="Please enter phrase name" filterable
+                    :tabindex="1">
+                    <template #default="{ item }">
+                        <b v-html="item.label" class="me-2"></b>
+                        <span>&#8594; </span>
+                        <span v-html="item.options">
+                        </span>
+                    </template>
+                </el-select-v2>
+            </div>
+            <div class="mt-2">
+                <label>Google Meaning</label>
+                <el-input v-model="googlePhraseMeaning" placeholder="Phrase Meaning"></el-input>
+            </div>
+            <div class="mt-2">
+                <lable>Example</lable>
+                <QuillEditor v-model:content="examplePhrase" toolbar="#context-toolbar2" content-type="html">
+                    <template #toolbar>
+                        <div id="context-toolbar2" class="my-toolbar">
+                        </div>
+                    </template>
+                </QuillEditor>
+            </div>
         </div>
         <template #footer>
             <span class="dialog-footer">
@@ -34,8 +46,9 @@ import ajax from '@/libs/ajax';
 import AnkiResponseModel from '@/models/response/AnkiResponseModel';
 import { ElDialog, ElButton, ElSelectV2, ElInput, ElMessage } from 'element-plus';
 import { OptionType } from 'element-plus/es/components/select-v2/src/select.types';
-import { de } from 'element-plus/es/locale';
 import { ref } from 'vue'
+import { QuillEditor } from '@vueup/vue-quill'
+
 const props = defineProps<{
     visible: boolean,
     searchText: string | null | undefined,
@@ -49,6 +62,7 @@ const loading = ref(false);
 const phraseOptions = ref<OptionType[]>([]);
 const searchPhraseText = ref("")
 const googlePhraseMeaning = ref("")
+const examplePhrase = ref("")
 const totalAnkiSearchResult = ref(0)
 
 const onDialogOpen = () => {
@@ -57,7 +71,7 @@ const onDialogOpen = () => {
 
     if (props.searchText != null) {
         searchNote(props.searchText)
-        searchPhraseText.value = props.searchText.replace(".","").replace(",","")
+        searchPhraseText.value = props.searchText.replace(".", "").replace(",", "")
     }
 
 }
@@ -125,7 +139,8 @@ const addNewPhraseToAnki = () => {
     if (searchPhraseText.value.trim() != "") {
         ajax.post<AnkiResponseModel>("/phrase", JSON.stringify({
             Front: searchPhraseText.value,
-            Meaning: googlePhraseMeaning.value
+            Meaning: googlePhraseMeaning.value,
+            Example: examplePhrase.value
         })).then(res => {
             if (res.data.error != null) {
                 ElMessage({
@@ -147,3 +162,9 @@ const closeDialog = (newParentPhraseId: string | null) => {
 }
 
 </script>
+
+<style>
+.ql-editor {
+  font-size: 15px;
+}
+</style>

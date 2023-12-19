@@ -13,7 +13,8 @@ export default interface LRPhraseModel {
     ParentPhrases: {
         NoteId: string,
         Front: string,
-        Meaning: string
+        Meaning: string,
+        Example: string
     }[] ,
     IsLoadParentPhrase: boolean
 }

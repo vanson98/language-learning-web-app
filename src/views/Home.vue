@@ -48,7 +48,7 @@ import ReviewLessonWord from './components/ReviewLessonWord.vue'
 import ReviewLessonPhrase from './components/ReviewLessonPhrase.vue';
 
 
-const videoId = ref<string>("kiJOu2okk7o")
+const videoId = ref<string>("81223025")
 const selectNoteType = ref<number>(0)
 const importingLRData = ref(false)
 const autoPlayAudio = ref(false)
@@ -107,6 +107,10 @@ body {
 
 .ql-editor {
   font-size: 18px;
+}
+
+.el-table {
+    --el-table-current-row-bg-color: #bfe1fc
 }
 
 .word-card-box {
