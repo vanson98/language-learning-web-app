@@ -120,7 +120,6 @@ onMounted(() => {
 const getLessonWord = () => {
   ajax.get<AnkiResponseModel>(`/lesson-words?vid=${props.videoId}&searchText=${searchText.value}`)
     .then(res => {
-      debugger
       if (res.data.error != null) {
         ElMessage({
           message: res.data.error,
