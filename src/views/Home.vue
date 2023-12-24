@@ -150,7 +150,7 @@ const onUploadLreFileSuccess = () => {
 const onUploadLreFileError = () => {
   ElMessage({
     type: 'error',
-    message: 'Import Data Successful ^-^',
+    message: 'Import Data Fail @-@',
   })
 }
 
