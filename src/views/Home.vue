@@ -60,6 +60,7 @@
       </el-main>
     </el-container>
   </div>
+    <el-alert :title="'hiihi'" type="error"/> 
 </template>
 <script lang="ts" setup>
 import ajax from '@/libs/ajax';
@@ -67,7 +68,7 @@ import {
   ElContainer,
   ElHeader,
   ElMain, ElUpload, UploadInstance,
-  ElRow, ElCol, ElSelect, ElButton, ElOption, ElMessage, ElInput, ElCheckbox, ElMessageBox,
+  ElRow, ElCol, ElSelect, ElButton, ElOption, ElMessage, ElInput, ElCheckbox, ElMessageBox, ElAlert,
 } from 'element-plus';
 import { ref } from 'vue';
 import ReviewLessonWord from './components/ReviewLessonWord.vue'
@@ -79,7 +80,7 @@ const selectNoteType = ref<number>(0)
 const importingLRData = ref(false)
 const autoPlayAudio = ref(false)
 const uploadRef = ref<UploadInstance>()
-
+const alertMessage = ref("")
 const noteTypeOptions = [
   {
     value: 0,
@@ -90,39 +91,6 @@ const noteTypeOptions = [
     label: "Phrase"
   }
 ]
-
-const importLRData = () => {
-
-  ElMessageBox.confirm(
-    'Are you sure want to import new data. Continue?',
-    'Warning',
-    {
-      confirmButtonText: 'OK',
-      cancelButtonText: 'Cancel',
-      type: 'warning',
-    }
-  )
-    .then(() => {
-      importingLRData.value = true
-      ajax.post("/import-lr-data").then(res => {
-        importingLRData.value = false
-        if (res.status == 200) {
-          ElMessage({
-            type: 'success',
-            message: 'Import Data Successful ^-^',
-          })
-        }
-      }).catch(res => {
-        importingLRData.value = false
-        ElMessage({
-          type: 'success',
-          message: 'Import Data Fail :(',
-        })
-      })
-    }).catch(() => { })
-
-
-}
 
 
 const submitUploadFileContent = () => {
@@ -147,11 +115,12 @@ const onUploadLreFileSuccess = () => {
   })
 }
 
-const onUploadLreFileError = () => {
-  ElMessage({
-    type: 'error',
-    message: 'Import Data Fail @-@',
-  })
+const onUploadLreFileError = (err : Error) => {
+  // ElMessage({
+  //   type: 'error',
+  //   message: err.message,
+  // })
+  alertMessage.value = err.message
 }
 
 </script>
@@ -187,4 +156,11 @@ body {
 .card-images img {
   width: 50%;
 }
+.el-alert {
+  margin: 20px 0 0;
+}
+.el-alert:first-child {
+  margin: 0;
+}
 </style>
+

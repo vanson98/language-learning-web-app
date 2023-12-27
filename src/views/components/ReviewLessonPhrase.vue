@@ -60,8 +60,11 @@
                 <template v-for="phrase in currentRow.ParentPhrases">
                     <div style="height: auto; margin-bottom: 8px;">
                         <hr>
-                        <el-tag>{{ phrase.NoteId }}</el-tag>
-                        <br>
+                        <div class="d-flex justify-content-between mb-3">
+                            <el-tag>{{ phrase.NoteId }}</el-tag>
+                            <el-button size="small" type="danger" @click="()=>removeParentPhrase(phrase.NoteId)">Remove</el-button>
+                        </div>
+                        
                         <b v-html="phrase.Front"></b>
                         <div v-html="phrase.Meaning"></div>
                         <i v-html="phrase.Example"></i>
@@ -184,7 +187,9 @@ window.addEventListener('keydown', (e) => {
             }
             singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex - 1])
         }
-
+        if(e.key == "r"){
+            playAudio(null)
+        }
     }
     if (targetElement.className == "ql-editor") {
         if (e.altKey && e.key == 'q') {
@@ -224,9 +229,11 @@ const playAudio = (previousRow: LRPhraseModel | null) => {
 
 const closeSearchPhraseDialog = (newPhraseId: string | null) => {
     if (newPhraseId != null && currentRow.value != null) {
-        currentRow.value.PhraseIds.push(newPhraseId)
-        currentRow.value.IsLoadParentPhrase = false;
-        getParentPhrase(currentRow.value)
+        if(!currentRow.value.PhraseIds.includes(newPhraseId)){
+            currentRow.value.PhraseIds.push(newPhraseId)
+            currentRow.value.IsLoadParentPhrase = false;
+            getParentPhrase(currentRow.value)
+        }
     }
     searchPhraseDialogVisible.value = false
 }
@@ -266,6 +273,14 @@ const updateLRPhrase = (lrPhrase: LRPhraseModel | null) => {
         }).catch(res => {
             console.error(res)
         })
+    }
+}
+
+const removeParentPhrase = (parentPhraseId: string)=>{
+    if(currentRow.value != null){
+        currentRow.value.PhraseIds =  currentRow.value.PhraseIds.filter(pid => pid != parentPhraseId)
+        currentRow.value.ParentPhrases = currentRow.value.ParentPhrases.filter(pp=>pp.NoteId != parentPhraseId)
+        updateLRPhrase(currentRow.value)
     }
 }
 

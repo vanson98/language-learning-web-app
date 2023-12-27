@@ -33,8 +33,12 @@
         </div>
         <hr>
         <div class="d-flex justify-content-between">
-
-          <el-button @click="() => deleteWord(currentRow!.NoteId)" type="danger">Remove</el-button>
+          <div>
+            <el-tag v-for="tag in currentRow.Tags">{{ tag }}</el-tag>
+          </div>
+          <div>
+            <el-button @click="() => deleteWord(currentRow!.NoteId)" type="danger">Remove</el-button>
+          </div>
         </div>
         <hr>
         <div>
@@ -59,7 +63,7 @@
 
             <div class="d-flex justify-content-start">
               <label>Context</label>
-              <div class="ms-5 mb-2 d-flex justify-content-between flex-grow-1" >
+              <div class="ms-5 mb-2 d-flex justify-content-between flex-grow-1">
                 <div>
                   <el-button @click="highLightWord" type="warning">Highlight</el-button>
                 </div>
@@ -259,7 +263,9 @@ window.addEventListener('keydown', (e) => {
       }
       singleTableRef.value?.setCurrentRow(lessonWords.value[currentRowIndex - 1])
     }
-
+    if (e.key == "r") {
+      playAudio(null)
+    }
   }
 
   if (targetElement.className == "ql-editor") {
