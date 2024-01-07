@@ -60,7 +60,6 @@
       </el-main>
     </el-container>
   </div>
-    <el-alert :title="'hiihi'" type="error"/> 
 </template>
 <script lang="ts" setup>
 import ajax from '@/libs/ajax';
@@ -75,7 +74,7 @@ import ReviewLessonWord from './components/ReviewLessonWord.vue'
 import ReviewLessonPhrase from './components/ReviewLessonPhrase.vue';
 import SERVER_BASE_URL from '@/libs/url';
 
-const videoId = ref<string>("81223025")
+const videoId = ref<string>("")
 const selectNoteType = ref<number>(0)
 const importingLRData = ref(false)
 const autoPlayAudio = ref(false)

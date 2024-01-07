@@ -31,23 +31,24 @@
                     <img :src="SERVER_BASE_URL + '/image?fileName=' + currentRow.NextImageFileName">
                 </div>
                 <hr>
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <el-button @click="highLightWord" type="warning">Highlight</el-button>
-                        <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
+                <div class="d-flex justify-content-start">
+                    <label>Context</label>
+                    <div class="ms-5 mb-2 d-flex justify-content-between flex-grow-1">
+                        <div>
+                            <el-button @click="highLightWord" type="warning">Highlight</el-button>
+                        </div>
                     </div>
-                    <div>
-                        <el-button @click="() => updateLRPhrase(currentRow)" type="primary">Save</el-button>
-                        <el-button @click="() => deletePhrase(currentRow!.NoteId)" type="danger">Remove</el-button>
-                    </div>
-
                 </div>
-                <hr>
                 <div>
                     <QuillEditor v-model:content="currentRow.Context" toolbar="minimal" content-type="html"
                         style="margin-bottom: 2px;">
-
                     </QuillEditor>
+                </div>
+                <div>
+                    <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
+                </div>
+                <div>
+                    <label>Context Translation</label>
                     <QuillEditor v-model:content="currentRow.ContextTranslation" toolbar="#context-toolbar2"
                         content-type="html">
                         <template #toolbar>
@@ -57,19 +58,26 @@
                     </QuillEditor>
                     <br>
                 </div>
+
                 <template v-for="phrase in currentRow.ParentPhrases">
                     <div style="height: auto; margin-bottom: 8px;">
                         <hr>
                         <div class="d-flex justify-content-between mb-3">
                             <el-tag>{{ phrase.NoteId }}</el-tag>
-                            <el-button size="small" type="danger" @click="()=>removeParentPhrase(phrase.NoteId)">Remove</el-button>
+                            <el-button size="small" type="danger"
+                                @click="() => removeParentPhrase(phrase.NoteId)">Remove</el-button>
                         </div>
-                        
+
                         <b v-html="phrase.Front"></b>
                         <div v-html="phrase.Meaning"></div>
                         <i v-html="phrase.Example"></i>
                     </div>
                 </template>
+                <hr>
+                <div>
+                    <el-button @click="() => updateLRPhrase(currentRow)" type="primary">Save</el-button>
+                    <el-button @click="() => deletePhrase(currentRow!.NoteId)" type="danger">Remove</el-button>
+                </div>
             </div>
         </el-col>
     </el-row>
@@ -187,7 +195,7 @@ window.addEventListener('keydown', (e) => {
             }
             singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex - 1])
         }
-        if(e.key == "r"){
+        if (e.key == "r") {
             playAudio(null)
         }
     }
@@ -229,7 +237,7 @@ const playAudio = (previousRow: LRPhraseModel | null) => {
 
 const closeSearchPhraseDialog = (newPhraseId: string | null) => {
     if (newPhraseId != null && currentRow.value != null) {
-        if(!currentRow.value.PhraseIds.includes(newPhraseId)){
+        if (!currentRow.value.PhraseIds.includes(newPhraseId)) {
             currentRow.value.PhraseIds.push(newPhraseId)
             currentRow.value.IsLoadParentPhrase = false;
             getParentPhrase(currentRow.value)
@@ -276,10 +284,10 @@ const updateLRPhrase = (lrPhrase: LRPhraseModel | null) => {
     }
 }
 
-const removeParentPhrase = (parentPhraseId: string)=>{
-    if(currentRow.value != null){
-        currentRow.value.PhraseIds =  currentRow.value.PhraseIds.filter(pid => pid != parentPhraseId)
-        currentRow.value.ParentPhrases = currentRow.value.ParentPhrases.filter(pp=>pp.NoteId != parentPhraseId)
+const removeParentPhrase = (parentPhraseId: string) => {
+    if (currentRow.value != null) {
+        currentRow.value.PhraseIds = currentRow.value.PhraseIds.filter(pid => pid != parentPhraseId)
+        currentRow.value.ParentPhrases = currentRow.value.ParentPhrases.filter(pp => pp.NoteId != parentPhraseId)
         updateLRPhrase(currentRow.value)
     }
 }
@@ -325,8 +333,4 @@ const deletePhrase = (noteId: string) => {
     height: 0;
     padding: 0 !important;
 }
-
-
-
-
 </style>

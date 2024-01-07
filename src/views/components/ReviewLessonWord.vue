@@ -67,16 +67,15 @@
                 <div>
                   <el-button @click="highLightWord" type="warning">Highlight</el-button>
                 </div>
-                <div>
-                  <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
-                </div>
               </div>
-
             </div>
             <QuillEditor v-model:content="currentRow.Context" toolbar="minimal" content-type="html"
               style="margin-bottom: 2px;">
 
             </QuillEditor>
+          </div>
+          <div>
+            <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
           </div>
           <div class="mt-2">
             <label>Context Translation</label>
