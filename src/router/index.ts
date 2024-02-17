@@ -29,24 +29,24 @@ const router = createRouter({
     
     routes
 })
-router.beforeEach((to,from, next)=>{
-    var exceptAuthenPathName = ["/login","/register","/logout"]
-    if(exceptAuthenPathName.includes(to.path)){
-        next()
-    }
-    else{
-        // check do have token
-        var token = getCookieByName("token")
-        if(token == null || token == ""){
-            next({name: "login"})
-        }
-        else{
-            next()
-        }
-        next()
-    }
+// router.beforeEach((to,from, next)=>{
+//     var exceptAuthenPathName = ["/login","/register","/logout"]
+//     if(exceptAuthenPathName.includes(to.path)){
+//         next()
+//     }
+//     else{
+//         // check do have token
+//         var token = getCookieByName("token")
+//         if(token == null || token == ""){
+//             next({name: "login"})
+//         }
+//         else{
+//             next()
+//         }
+//         next()
+//     }
     
-})
+// })
 
 const getCookieByName = (name : string) : string | undefined =>{
     debugger
