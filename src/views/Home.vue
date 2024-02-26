@@ -4,7 +4,7 @@
       <el-header style="height: auto;">
         <el-row class="mt-2">
           <el-col :span="3">
-            <ElInput v-model="videoId" class="pe-2" />
+            <ElInput v-model="videoId" class="pe-2" placeholder="Type Video Id" />
           </el-col>
           <el-col :span="3">
             <el-select v-model="selectNoteType" placeholder="Note Type" class="pe-2">
@@ -15,11 +15,19 @@
           <el-col :span="3">
             <el-checkbox v-model="autoPlayAudio" label="Auto Play Audio" size="large"></el-checkbox>
           </el-col>
+          <el-col :span="3">
+            <el-select 
+              v-model="voiceType"
+            >
+              <el-option :key="0" :value="'Context'" :label="'Context Voice'"></el-option>
+              <el-option :key="1" :value="'Word'" :label="'Word Voice'"></el-option>
+            </el-select>
+          </el-col>
           <!-- <el-col :span="3">
             <el-button type="primary" @click="openSearchPhraseDialog">Search Phrase</el-button>
           </el-col> -->
 
-          <el-col :span="12">
+          <el-col :span="9">
             <div class="d-flex justify-content-end w-100">
 
               <!-- <form :action="`${SERVER_BASE_URL}/upload-lre-file`" method="POST" enctype="multipath/form-data">
@@ -53,7 +61,7 @@
         </el-row>
       </el-header>
       <el-main style="height: 90vh;overflow: hidden;">
-        <ReviewLessonWord v-if="selectNoteType == 0" :video-id="videoId" :auto-play-audio="autoPlayAudio">
+        <ReviewLessonWord v-if="selectNoteType == 0" :video-id="videoId" :auto-play-audio="autoPlayAudio" :voice-type="voiceType">
         </ReviewLessonWord>
         <ReviewLessonPhrase v-if="selectNoteType == 1" :video-id="videoId" :auto-play-audio="autoPlayAudio">
         </ReviewLessonPhrase>
@@ -67,7 +75,7 @@ import {
   ElContainer,
   ElHeader,
   ElMain, ElUpload, UploadInstance,
-  ElRow, ElCol, ElSelect, ElButton, ElOption, ElMessage, ElInput, ElCheckbox, ElMessageBox, ElAlert,
+  ElRow, ElCol, ElSelect, ElButton, ElOption, ElMessage, ElInput, ElCheckbox, ElMessageBox, ElAlert, ElRadioGroup, ElRadio
 } from 'element-plus';
 import { ref } from 'vue';
 import ReviewLessonWord from './components/ReviewLessonWord.vue'
@@ -77,7 +85,8 @@ import SERVER_BASE_URL from '@/libs/url';
 const videoId = ref<string>("")
 const selectNoteType = ref<number>(0)
 const importingLRData = ref(false)
-const autoPlayAudio = ref(false)
+const autoPlayAudio = ref(true)
+const voiceType = ref("Word")
 const uploadRef = ref<UploadInstance>()
 const alertMessage = ref("")
 const noteTypeOptions = [

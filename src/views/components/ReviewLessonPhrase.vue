@@ -129,6 +129,7 @@ const getLessonPhrases = () => {
                 lessonPhrases.value = []
                 res.data?.result.forEach((item: any) => {
                     lessonPhrases.value.push({
+                        CardId: item.cards[0],
                         NoteId: item.noteId,
                         Tags: item.tags,
                         Context: item["fields"].Context.value as string,

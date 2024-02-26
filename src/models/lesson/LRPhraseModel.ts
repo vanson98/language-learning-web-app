@@ -1,6 +1,7 @@
 import NoteInfo from "../note/NoteInfo"
 
 export default interface LRPhraseModel {
+    CardId: string,
     NoteId: string,
     AudioFileName: string,
     Context: string,
