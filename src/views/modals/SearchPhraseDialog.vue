@@ -1,5 +1,7 @@
 <template>
-    <el-dialog v-model="visible" title="Search Phrase" width="60%" @open="onDialogOpen">
+    <el-dialog v-model="visible" title="Search Phrase" width="60%" 
+        @open="onDialogOpen" 
+        @close="() => closeDialog(null)">
         <div>
             <div>
                 <el-input v-model="searchPhraseText" @keyup.enter="() => searchNote(searchPhraseText)"

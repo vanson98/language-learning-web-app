@@ -1,25 +1,24 @@
 <template>
     <ElContainer class="login-form-ctn">
         <el-form :model="formModel" label-width="120px">
-        <el-form-item label="User Name">
-            <el-input v-model="formModel.userName"></el-input>
-        </el-form-item>
-        <el-form-item label="Pass Word">
-            <el-input v-model="formModel.password" type="password" autocomplete="off"></el-input>
-        </el-form-item>
-        <p v-if="displayError">Username or password is incorect</p>
-        <el-form-item>
-            <el-button type="primary" @click="onSubmit">Login</el-button>
-        </el-form-item>
-    </el-form>
+            <el-form-item label="User Name">
+                <el-input v-model="formModel.userName"></el-input>
+            </el-form-item>
+            <el-form-item label="Pass Word">
+                <el-input v-model="formModel.password" type="password" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="onSubmit">Login</el-button>
+            </el-form-item>
+            <p v-if="displayError" style="color: red;">{{ message }}</p>
+        </el-form>
     </ElContainer>
-    
 </template>
 
 <script setup lang="ts">
 import { ElInput,ElForm,ElFormItem, ElButton, ElContainer } from 'element-plus';
 import LoginModel from '@/models/authen/LoginModel'
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import axios from 'axios';
 import ajax from '@/libs/ajax';
 import router from '@/router';
@@ -27,7 +26,8 @@ const formModel = reactive<LoginModel>({
     userName: null,
     password: null
 })
-var displayError = false;
+const displayError = ref(false);
+const message = ref("")
 
 const client = axios.create({
     withCredentials: true
@@ -35,11 +35,14 @@ const client = axios.create({
 
 const onSubmit = () =>{
     ajax.post("/login",JSON.stringify(formModel)).then((res)=>{
-        if(res.status == 401){
-            displayError = true;
-        }else{
+        if(res.status == 200){
             localStorage.setItem("userId",res.data)
             router.push({path: "/home"})
+        }
+    }).catch(err=>{
+        if(err.status == 401){
+            displayError.value = true;
+            message.value = err.data;
         }
     })
 }
