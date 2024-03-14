@@ -3,27 +3,32 @@
     <el-col :span="4">
       <el-input v-model="searchText" placeholder="Serch Phrase" @keyup.enter="getLessonWord"></el-input>
     </el-col>
-    <el-col :span="4">
+    <el-col :span="2">
       <div class="ms-5">
         <el-button @click="getLessonWord" type="primary">Load Data</el-button>
+      </div>
+    </el-col>
+    <el-col :span="2">
+      <div class="ms-5">
+        <el-button @click="highLightAllWord" type="warning">Highlight All</el-button>
       </div>
     </el-col>
   </el-row>
   <el-row>
     <el-col :span="14">
-      <el-table :data="lessonWords" ref="singleTableRef" style="width: 100%; height: 85vh" highlight-current-row :row-key="'NoteId'"
-        @current-change="handleCurrentRowChange">
+      <el-table :data="lessonWords" ref="singleTableRef" style="width: 100%; height: 85vh" highlight-current-row
+        :row-key="'NoteId'" @current-change="handleCurrentRowChange">
         <el-table-column type="index" width="50" />
         <el-table-column property="Context" label="Context" min-width="200">
           <template #default="scope">
             <p v-html="scope.row.Context"></p>
             <audio :id="'card-audio-' + scope.row.NoteId" preload="auto">
               <source :src="SERVER_BASE_URL + '/audio?fileName=' + scope.row.AudioFileName
-                " type="audio/mpeg" />
+      " type="audio/mpeg" />
             </audio>
             <audio :id="'word-voice-' + scope.row.NoteId" preload="auto">
               <source :src="SERVER_BASE_URL + '/word-voice?fileName=' + scope.row.Lemma + '.mp3'
-                " type="audio/mpeg" />
+      " type="audio/mpeg" />
             </audio>
           </template>
         </el-table-column>
@@ -33,13 +38,13 @@
       <div class="word-info-box">
         <div class="card-images">
           <img :src="SERVER_BASE_URL +
-            '/image?fileName=' +
-            currentRow.PrevImageFileName
-            " />
+      '/image?fileName=' +
+      currentRow.PrevImageFileName
+      " />
           <img :src="SERVER_BASE_URL +
-            '/image?fileName=' +
-            currentRow.NextImageFileName
-            " />
+      '/image?fileName=' +
+      currentRow.NextImageFileName
+      " />
         </div>
         <hr />
         <div class="d-flex justify-content-between">
@@ -78,16 +83,20 @@
                 </div>
               </div>
             </div>
-            <QuillEditor v-model:content="currentRow.Context" toolbar="minimal" content-type="html"
+            <div v-html="currentRow.Context">
+
+            </div>
+            <!-- <QuillEditor v-model:content="currentRow.Context" toolbar="minimal" content-type="text"
               style="margin-bottom: 2px">
-            </QuillEditor>
+            </QuillEditor> -->
           </div>
           <div>
             <el-button @click="() => playContextAudio(null)" type="primary">Replay Audio</el-button>
           </div>
           <div class="mt-2">
             <label>Context Translation</label>
-            <QuillEditor v-model:content="currentRow.ContextTranslation" toolbar="#context-toolbar2" content-type="html">
+            <QuillEditor v-model:content="currentRow.ContextTranslation" toolbar="#context-toolbar2"
+              content-type="html">
               <template #toolbar>
                 <div id="context-toolbar2" class="my-toolbar"></div>
               </template>
@@ -202,7 +211,7 @@ const handleCurrentRowChange = (
 
 const onCurrentRowChange = (prevRow: LessonWordModel | null) => {
   if (prevRow) {
-    updateLRWord(prevRow);
+    //updateLRWord(prevRow);
   }
   playMedia(prevRow)
 };
@@ -235,6 +244,33 @@ const updateLRWord = (lrWord: LessonWordModel) => {
       console.error(res);
     });
 };
+
+const highLightAllWord = () => {
+  lessonWords.value.forEach((item) => {
+    if (!item.Context.includes("</span>")) {
+      item.Context = item.Context.replace(
+        item.Word,
+        `<span style="background-color: rgb(255, 170, 0);">${item.Word}</span>`
+      )
+    }
+  })
+  saveHighlightWords()
+}
+
+const saveHighlightWords = () => {
+  let wordContextList = lessonWords.value.map(({ NoteId, Context }) => ({
+    NoteId,
+    Context
+  }))
+  ajax.post("/highlight-words",JSON.stringify(wordContextList)).then((res)=>{
+    if(res.status === 200){
+      ElMessage({
+              type: "success",
+              message: "All notes are highlighted",
+       });
+    }
+  })
+}
 
 const deleteWord = (noteId: string) => {
   ElMessageBox.confirm("Permanently delete the word. Continue?", "Warning", {
@@ -283,14 +319,16 @@ const playWordVoice = () => {
   var currentAudioElement = document.getElementById(
     "word-voice-" + currentRow.value?.NoteId
   ) as HTMLAudioElement;
-  if(currentAudioElement != null){
-    currentAudioElement.play().then(_=>{
+  if (currentAudioElement != null) {
+    currentAudioElement.play().then(_ => {
       setTimeout(() => {
         currentAudioElement.pause()
       }, 2000);
     })
   }
 }
+
+
 
 const highLightWord = () => {
   var selectText = window.getSelection()?.toString();

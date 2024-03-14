@@ -26,14 +26,11 @@
           <!-- <el-col :span="3">
             <el-button type="primary" @click="openSearchPhraseDialog">Search Phrase</el-button>
           </el-col> -->
-
+          <el-col :span="2">
+            <el-button>Insert Review Logs</el-button>
+          </el-col>
           <el-col :span="9">
             <div class="d-flex justify-content-end w-100">
-
-              <!-- <form :action="`${SERVER_BASE_URL}/upload-lre-file`" method="POST" enctype="multipath/form-data">
-                <input type="file" name="lre_file" id="lre_file">
-                <button type="submit">SUBMIT</button>
-              </form> -->
               <el-upload 
                 :auto-upload="false" 
                 :action="`${SERVER_BASE_URL}/upload-lre-file`" 
@@ -47,15 +44,10 @@
                 <template #trigger>
                   <el-button type="primary">Select File</el-button>
                 </template>
-
                 <el-button class="ms-3" type="success" @click="submitUploadFileContent">
                   Upload To Server
                 </el-button>
-
-
               </el-upload>
-              <!-- <el-button type="danger" v-bind:loading="importingLRData" @click="importLRData">
-                Import LR Data</el-button> -->
             </div>
           </el-col>
         </el-row>
@@ -70,7 +62,6 @@
   </div>
 </template>
 <script lang="ts" setup>
-import ajax from '@/libs/ajax';
 import {
   ElContainer,
   ElHeader,

@@ -13,7 +13,7 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import("../views/authen/Login.vue")
     },
     {
-        path: "/home",
+        path: "/",
         name: "home",
         component: Home,
     },
@@ -45,7 +45,6 @@ const router = createRouter({
 //         }
 //         next()
 //     }
-    
 // })
 
 const getCookieByName = (name : string) : string | undefined =>{
