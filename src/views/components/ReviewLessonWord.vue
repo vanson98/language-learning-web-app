@@ -83,12 +83,9 @@
                 </div>
               </div>
             </div>
-            <div v-html="currentRow.Context">
-
-            </div>
-            <!-- <QuillEditor v-model:content="currentRow.Context" toolbar="minimal" content-type="text"
+            <QuillEditor v-model:content="currentRow.Context" toolbar="minimal" content-type="html"
               style="margin-bottom: 2px">
-            </QuillEditor> -->
+            </QuillEditor>
           </div>
           <div>
             <el-button @click="() => playContextAudio(null)" type="primary">Replay Audio</el-button>
@@ -211,7 +208,7 @@ const handleCurrentRowChange = (
 
 const onCurrentRowChange = (prevRow: LessonWordModel | null) => {
   if (prevRow) {
-    //updateLRWord(prevRow);
+    updateLRWord(prevRow);
   }
   playMedia(prevRow)
 };
@@ -252,6 +249,7 @@ const highLightAllWord = () => {
         item.Word,
         `<span style="background-color: rgb(255, 170, 0);">${item.Word}</span>`
       )
+      item.Context = "<p>" + item.Context + "</p>"
     }
   })
   saveHighlightWords()
@@ -262,14 +260,21 @@ const saveHighlightWords = () => {
     NoteId,
     Context
   }))
-  ajax.post("/highlight-words",JSON.stringify(wordContextList)).then((res)=>{
-    if(res.status === 200){
-      ElMessage({
-              type: "success",
-              message: "All notes are highlighted",
-       });
-    }
-  })
+  ElMessageBox.confirm("Note data is gonna change. Are you sure?", "Warning", {
+    confirmButtonText: "Update",
+    cancelButtonText: "Cancel",
+    type: "warning"
+  }).then(() => {
+    ajax.post("/highlight-words", JSON.stringify(wordContextList)).then((res) => {
+      if (res.status === 200) {
+        ElMessage({
+          type: "success",
+          message: "All notes are highlighted",
+        });
+      }
+    })
+  }).catch(()=>{})
+
 }
 
 const deleteWord = (noteId: string) => {
