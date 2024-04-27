@@ -18,7 +18,8 @@
                     <template #default="scope">
                         <p v-html="scope.row.Context"></p>
                         <audio :id="'card-audio-' + scope.row.NoteId">
-                            <source :src="SERVER_BASE_URL + '/audio?fileName=' + scope.row.AudioFileName" type="audio/mpeg">
+                            <source :src="SERVER_BASE_URL + '/audio?fileName=' + scope.row.AudioFileName"
+                                type="audio/mpeg">
                         </audio>
                     </template>
                 </el-table-column>
@@ -64,8 +65,12 @@
                         <hr>
                         <div class="d-flex justify-content-between mb-3">
                             <el-tag>{{ phrase.NoteId }}</el-tag>
-                            <el-button size="small" type="danger"
-                                @click="() => removeParentPhrase(phrase.NoteId)">Remove</el-button>
+                            <div>
+                                <el-button size="small" type="warning"
+                                    @click="() => openEditPhraseDialog({ Front: phrase.Front, Example: phrase.Example, Meaning: phrase.Meaning, NoteId: phrase.NoteId })">Edit</el-button>
+                                <el-button size="small" type="danger"
+                                    @click="() => removeParentPhrase(phrase.NoteId)">Remove</el-button>
+                            </div>
                         </div>
 
                         <b v-html="phrase.Front"></b>
@@ -84,20 +89,24 @@
     <SearchPhraseDialog :visible="searchPhraseDialogVisible" :search-text="searchTextPhrase"
         @close="closeSearchPhraseDialog" :current-l-r-phrase-id="currentRow?.NoteId"
         :current-parent-phrase-ids="currentRow?.PhraseIds" />
+    <EditPhraseDialog :visible="editPhraseDialogVisible" @on-close="editPhraseDialogVisible = false"
+        v-model:note-id="editPhraseModel.NoteId" v-model:example="editPhraseModel.Example"
+        v-model:front="editPhraseModel.Front" v-model:meaning="editPhraseModel.Meaning" />
 </template>
 
 <script lang="ts" setup>
 import { ElTag, ElRow, ElCol, ElTable, ElTableColumn, ElButton, ElMessageBox, ElMessage, ElInput } from 'element-plus'
 import SERVER_BASE_URL from '../../libs/url'
 import LRPhraseModel from '../../models/lesson/LRPhraseModel'
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, toRefs } from 'vue';
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
 import ajax from '@/libs/ajax';
 import AnkiResponseModel from '@/models/response/AnkiResponseModel';
 import moment from 'moment';
 import SearchPhraseDialog from '../modals/SearchPhraseDialog.vue'
-
+import EditPhraseDialog from '../modals/EditPhraseDialog.vue'
+import EditPhraseModel from '@/models/phrase/EditPhraseModel';
 const props = defineProps<{
     videoId: string,
     autoPlayAudio: boolean
@@ -109,7 +118,13 @@ const singleTableRef = ref<InstanceType<typeof ElTable>>()
 const searchText = ref<string>("")
 const searchTextPhrase = ref<string | undefined>("")
 const searchPhraseDialogVisible = ref<boolean>(false)
-
+const editPhraseDialogVisible = ref<boolean>(false)
+const editPhraseModel = ref<EditPhraseModel>({
+    NoteId: "",
+    Example: "",
+    Front: "",
+    Meaning: ""
+})
 
 onMounted(() => {
     getLessonPhrases()
@@ -212,7 +227,6 @@ window.addEventListener('keydown', (e) => {
 });
 
 
-
 const highLightWord = () => {
     var selectText = window.getSelection()?.toString()
     if (currentRow.value != null && selectText != null) {
@@ -220,7 +234,6 @@ const highLightWord = () => {
         currentRow.value.Context = currentRow.value.Context.replace(selectText, highlightText)
     }
 }
-
 
 const playAudio = (previousRow: LRPhraseModel | null) => {
     var currentAudioElement = document.getElementById("card-audio-" + currentRow.value?.NoteId)
@@ -235,7 +248,6 @@ const playAudio = (previousRow: LRPhraseModel | null) => {
 }
 
 
-
 const closeSearchPhraseDialog = (newPhraseId: string | null) => {
     if (newPhraseId != null && currentRow.value != null) {
         if (!currentRow.value.PhraseIds.includes(newPhraseId)) {
@@ -245,6 +257,11 @@ const closeSearchPhraseDialog = (newPhraseId: string | null) => {
         }
     }
     searchPhraseDialogVisible.value = false
+}
+
+const openEditPhraseDialog = (phrase: EditPhraseModel) => {
+    editPhraseDialogVisible.value = true
+    editPhraseModel.value = phrase
 }
 // ====================== GET PARENT PHRASE, UPDATE LR PHRASE AND DELETE PHRASE ================
 
@@ -318,6 +335,7 @@ const deletePhrase = (noteId: string) => {
             })
         }).catch(() => { })
 }
+
 
 </script>
 

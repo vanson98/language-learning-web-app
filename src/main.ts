@@ -15,6 +15,7 @@ const globalOptions = {
       toolbar: ['bold', 'italic', 'underline']
     },
     spellcheck: false,
+    scrollY:true
   }
 
 const app = createApp(App);

@@ -1,7 +1,9 @@
 <template>
-    <el-dialog v-model="visible" title="Search Phrase" width="60%" 
+    <el-dialog v-bind:model-value="visible" title="Search Phrase" width="60%" 
         @open="onDialogOpen" 
-        @close="() => closeDialog(null)">
+        @close="() => closeDialog(null)"
+        draggable
+        :overflow="true">
         <div>
             <div>
                 <el-input v-model="searchPhraseText" @keyup.enter="() => searchNote(searchPhraseText)"
