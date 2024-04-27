@@ -57,16 +57,16 @@ const meaningQuillEditor = ref<Quill>()
 
 const setQuillContent = ()=>{
 
-    exampleQuillEditor.value.setHTML("<p>" + example.value?.replace() + "</p>")
-    meaningQuillEditor.value.setHTML("<p>"+meaning.value+"</p>")
+    exampleQuillEditor.value.setHTML(example.value?.replace("<div>","<p>").replace("</div>","</p>"))
+    meaningQuillEditor.value.setHTML(meaning.value?.replace("<div>","<p>").replace("</div>","</p>"))
     
 }
 const updatePhrase = () =>{
     var phraseModel : EditPhraseModel ={
         NoteId: noteId.value,
         Front: front.value,
-        Example: example.value,
-        Meaning: meaning.value
+        Example: exampleQuillEditor.value.getHTML(),
+        Meaning: meaningQuillEditor.value.getHTML()
     }
     ajax.put<AnkiResponseModel>("/phrase", JSON.stringify(phraseModel)).then(res => {
             if (res.data.error != null) {
@@ -79,7 +79,7 @@ const updatePhrase = () =>{
                     message: "Update phrase success",
                     type: 'success',
                 })
-                
+                emit("onClose",true)
             }
         }).catch(res => {
             console.log(res)
@@ -87,6 +87,6 @@ const updatePhrase = () =>{
 }
 
 const closeDialog = () =>{
-    emit("onClose",null)
+    emit("onClose",false)
 }
 </script>

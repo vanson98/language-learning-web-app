@@ -75,7 +75,8 @@
 
                         <b v-html="phrase.Front"></b>
                         <div v-html="phrase.Meaning"></div>
-                        <i v-html="phrase.Example"></i>
+                        <div style="color: green;font-style: italic;font-weight: 600;" v-html="phrase.Example">
+                        </div>
                     </div>
                 </template>
                 <hr>
@@ -89,7 +90,7 @@
     <SearchPhraseDialog :visible="searchPhraseDialogVisible" :search-text="searchTextPhrase"
         @close="closeSearchPhraseDialog" :current-l-r-phrase-id="currentRow?.NoteId"
         :current-parent-phrase-ids="currentRow?.PhraseIds" />
-    <EditPhraseDialog :visible="editPhraseDialogVisible" @on-close="editPhraseDialogVisible = false"
+    <EditPhraseDialog :visible="editPhraseDialogVisible" @on-close="closeEditPhraseDialog"
         v-model:note-id="editPhraseModel.NoteId" v-model:example="editPhraseModel.Example"
         v-model:front="editPhraseModel.Front" v-model:meaning="editPhraseModel.Meaning" />
 </template>
@@ -177,12 +178,12 @@ const getLessonPhrases = () => {
 
 const handleCurrentRowChange = (cr: LRPhraseModel, ocr: LRPhraseModel) => {
     currentRow.value = cr
-    onCurrentPhraseRowChange(cr, ocr)
+    onCurrentRowChange(cr, ocr)
 }
 
-const onCurrentPhraseRowChange = (currectRow: LRPhraseModel | null, previousRow: LRPhraseModel | null) => {
-    if (currectRow != null) {
-        getParentPhrase(currectRow)
+const onCurrentRowChange = (currentRow: LRPhraseModel | null, previousRow: LRPhraseModel | null) => {
+    if (currentRow != null) {
+        getParentPhrase(currentRow)
     }
     if (previousRow) {
         updateLRPhrase(previousRow)
@@ -257,6 +258,14 @@ const closeSearchPhraseDialog = (newPhraseId: string | null) => {
         }
     }
     searchPhraseDialogVisible.value = false
+}
+
+const closeEditPhraseDialog = (isUpdated: boolean) =>{
+    if(isUpdated && currentRow.value != null){
+        currentRow.value.IsLoadParentPhrase = false;
+        getParentPhrase(currentRow.value)
+    }
+    editPhraseDialogVisible.value = false;
 }
 
 const openEditPhraseDialog = (phrase: EditPhraseModel) => {
