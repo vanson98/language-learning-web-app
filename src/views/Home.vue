@@ -73,10 +73,10 @@ import ReviewLessonWord from './components/ReviewLessonWord.vue'
 import ReviewLessonPhrase from './components/ReviewLessonPhrase.vue';
 import SERVER_BASE_URL from '@/libs/url';
 
-const videoId = ref<string>("1922ea92")
-const selectNoteType = ref<number>(1)
+const videoId = ref<string>("")
+const selectNoteType = ref<number>(0)
 const autoPlayAudio = ref(false)
-const voiceType = ref("Word")
+const voiceType = ref("Context")
 const uploadRef = ref<UploadInstance>()
 const alertMessage = ref("")
 const noteTypeOptions = [

@@ -65,8 +65,8 @@ const updatePhrase = () =>{
     var phraseModel : EditPhraseModel ={
         NoteId: noteId.value,
         Front: front.value,
-        Example: exampleQuillEditor.value.getHTML(),
-        Meaning: meaningQuillEditor.value.getHTML()
+        Example: exampleQuillEditor.value.getHTML().replace("<p><br></p>",""),
+        Meaning: meaningQuillEditor.value.getHTML().replace("<p><br></p>","")
     }
     ajax.put<AnkiResponseModel>("/phrase", JSON.stringify(phraseModel)).then(res => {
             if (res.data.error != null) {
