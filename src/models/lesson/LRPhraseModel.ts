@@ -8,8 +8,7 @@ export default interface LRPhraseModel {
     ContextTranslation: string,
     DateCreated: Date,
     PhraseIds: string[],
-    NextImageFileName: string,
-    PrevImageFileName: string,
+    ImageFileName: string,
     Tags: string[]
     ParentPhrases: {
         NoteId: string,

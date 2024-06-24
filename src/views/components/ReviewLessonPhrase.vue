@@ -27,16 +27,23 @@
         </el-col>
         <el-col :span="10" style="height: 100%;" v-if="currentRow">
             <div class="phrase-info-box">
-                <div class="card-images">
-                    <img :src="SERVER_BASE_URL + '/image?fileName=' + currentRow.PrevImageFileName">
-                    <img :src="SERVER_BASE_URL + '/image?fileName=' + currentRow.NextImageFileName">
+               
+                <div class="mb-3">
+                    <label>Type Text</label>
+                    <ElInput @keydown.enter="goToNextLrPhrase" v-model="typeText"></ElInput>
                 </div>
-                <hr>
                 <div class="d-flex justify-content-start">
                     <label>Context</label>
                     <div class="ms-5 mb-2 d-flex justify-content-between flex-grow-1">
                         <div>
                             <el-button @click="highLightWord" type="warning">Highlight</el-button>
+                        </div>
+                        <div>
+                            <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
+                        </div>
+                        <div>
+                            <el-button @click="() => updateLRPhrase(currentRow)" type="primary">Save</el-button>
+                            <el-button @click="() => deletePhrase(currentRow!.NoteId)" type="danger">Remove</el-button>
                         </div>
                     </div>
                 </div>
@@ -44,9 +51,6 @@
                     <QuillEditor v-model:content="currentRow.Context" toolbar="minimal" content-type="html"
                         style="margin-bottom: 2px;">
                     </QuillEditor>
-                </div>
-                <div>
-                    <el-button @click="() => playAudio(null)" type="primary">Replay Audio</el-button>
                 </div>
                 <div>
                     <label>Context Translation</label>
@@ -80,9 +84,8 @@
                     </div>
                 </template>
                 <hr>
-                <div>
-                    <el-button @click="() => updateLRPhrase(currentRow)" type="primary">Save</el-button>
-                    <el-button @click="() => deletePhrase(currentRow!.NoteId)" type="danger">Remove</el-button>
+                <div class="card-images">
+                    <img :src="SERVER_BASE_URL + '/image?fileName=' + currentRow.ImageFileName">
                 </div>
             </div>
         </el-col>
@@ -126,6 +129,7 @@ const editPhraseModel = ref<EditPhraseModel>({
     Front: "",
     Meaning: ""
 })
+const typeText = ref<string | null>("")
 
 onMounted(() => {
     getLessonPhrases()
@@ -150,8 +154,7 @@ const getLessonPhrases = () => {
                         Tags: item.tags,
                         Context: item["fields"].Context.value as string,
                         ContextTranslation: item["fields"]["Context translation"].value as string,
-                        NextImageFileName: item["fields"]["Next Image media filename"].value,
-                        PrevImageFileName: item["fields"]["Previous Image media filename"].value,
+                        ImageFileName: item["fields"]["Next Image media filename"].value,
                         AudioFileName: item["fields"]["Audio clip media filename"].value as string,
                         DateCreated: moment(item["fields"]["Date created"].value as string, "YYYY-MM-DD hh:mm").toDate(),
                         PhraseIds: (item["fields"]["PhraseIds"].value as string).split(",").filter(id => id != ""),
@@ -198,34 +201,47 @@ const onCurrentRowChange = (currentRow: LRPhraseModel | null, previousRow: LRPhr
 window.addEventListener('keydown', (e) => {
     var targetElement = e.target as Element
     if (!(targetElement instanceof HTMLInputElement) && targetElement.className != "ql-editor") {
-        if (e.key == "ArrowDown" && currentRow.value != null) {
-            var currentRowIndex = lessonPhrases.value.indexOf(currentRow.value)
-            if (currentRowIndex == lessonPhrases.value.length - 1) {
-                return
-            }
-            singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex + 1])
+        if (e.key == "ArrowDown") {
+            goToNextLrPhrase()
         }
-        if (e.key == "ArrowUp" && currentRow.value != null) {
-            var currentRowIndex = lessonPhrases.value.indexOf(currentRow.value)
-            if (currentRowIndex == 0) {
-                return
-            }
-            singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex - 1])
+        if (e.key == "ArrowUp") {
+            goToPreviousLrPhrase()
         }
         if (e.key == "r") {
             playAudio(null)
         }
     }
     if (targetElement.className == "ql-editor") {
-        if (e.altKey && e.key == 'q') {
+        if (e.ctrlKey && e.key.toLowerCase() === 'q') {
             searchTextPhrase.value = window.getSelection()?.toString()
             searchPhraseDialogVisible.value = true
         }
-        if (e.altKey && e.key == 'a') {
+        if (e.ctrlKey && e.key == 'a') {
             highLightWord()
         }
     }
 });
+
+const goToNextLrPhrase = () => {
+    if (currentRow.value != null) {
+        var currentRowIndex = lessonPhrases.value.indexOf(currentRow.value)
+        if (currentRowIndex == lessonPhrases.value.length - 1) {
+            return
+        }
+        singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex + 1])
+    }
+    typeText.value = null
+}
+
+const goToPreviousLrPhrase = () => {
+    if (currentRow.value != null) {
+        var currentRowIndex = lessonPhrases.value.indexOf(currentRow.value)
+        if (currentRowIndex == 0) {
+            return
+        }
+        singleTableRef.value?.setCurrentRow(lessonPhrases.value[currentRowIndex - 1])
+    }
+}
 
 
 const highLightWord = () => {
@@ -260,8 +276,8 @@ const closeSearchPhraseDialog = (newPhraseId: string | null) => {
     searchPhraseDialogVisible.value = false
 }
 
-const closeEditPhraseDialog = (isUpdated: boolean) =>{
-    if(isUpdated && currentRow.value != null){
+const closeEditPhraseDialog = (isUpdated: boolean) => {
+    if (isUpdated && currentRow.value != null) {
         currentRow.value.IsLoadParentPhrase = false;
         getParentPhrase(currentRow.value)
     }
@@ -330,7 +346,7 @@ const deletePhrase = (noteId: string) => {
         }
     )
         .then(() => {
-            ajax.get<AnkiResponseModel>(`delete-note?noteId=${noteId}&audioFileName=${currentRow.value?.AudioFileName}&nextImageFileName=${currentRow.value?.NextImageFileName}&prevImageFileName=${currentRow.value?.PrevImageFileName}`).then(res => {
+            ajax.get<AnkiResponseModel>(`delete-note?noteId=${noteId}&audioFileName=${currentRow.value?.AudioFileName}&imageFileName=${currentRow.value?.ImageFileName}`).then(res => {
                 if (res.data.error == null) {
                     ElMessage({
                         type: 'success',

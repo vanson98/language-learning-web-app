@@ -7,7 +7,7 @@
         <div>
             <div>
                 <el-input v-model="searchPhraseText" @keyup.enter="() => searchNote(searchPhraseText)"
-                    @keyup.ctrl.space="searchPhraseOnGoole" placeholder="Phrase Text" :tabindex="0">
+                    @keydown="handleKeyDownOnSearchPhraseInput" placeholder="Phrase Text" :tabindex="0">
                 </el-input>
                 <label class="mt-2">Total anki search result: {{ totalAnkiSearchResult }}</label>
                 <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" remote :remote-method="searchNote" clearable
@@ -133,10 +133,13 @@ const addMoreParentPhrase = (phraseId: string) => {
     }
 }
 
-const searchPhraseOnGoole = (event: Event) => {
-    var searchString = searchPhraseText.value.split(" ").join("+")
-    var url = `https://www.google.com/search?q=${searchString}`
-    window.open(url, "_blank", "height=700,width=800,left=10,top=10,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no,status=yes")
+const handleKeyDownOnSearchPhraseInput = (event: Event) : any=> {
+    if(event instanceof KeyboardEvent && event.ctrlKey && event.key === 'g'){
+        var searchString = searchPhraseText.value.split(" ").join("+")
+        var url = `https://www.google.com/search?q=${searchString}`
+        window.open(url, "_blank", "height=700,width=800,left=10,top=10,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no,status=yes")
+        event.preventDefault()     
+    }
 }
 
 const addNewPhraseToAnki = () => {

@@ -24,11 +24,14 @@
             <p v-html="scope.row.Context"></p>
             <audio :id="'card-audio-' + scope.row.NoteId" preload="auto">
               <source :src="SERVER_BASE_URL + '/audio?fileName=' + scope.row.AudioFileName
-      " type="audio/mpeg" />
+                " type="audio/mpeg" />
             </audio>
             <audio :id="'word-voice-' + scope.row.NoteId" preload="auto">
-              <source :src="SERVER_BASE_URL + '/word-voice?fileName=' + scope.row.Lemma + '.mp3'
-      " type="audio/mpeg" />
+              <source :src="SERVER_BASE_URL +
+                '/word-voice?fileName=' +
+                scope.row.Lemma +
+                '.mp3'
+                " type="audio/mpeg" />
             </audio>
           </template>
         </el-table-column>
@@ -36,50 +39,41 @@
     </el-col>
     <el-col :span="10" v-if="currentRow != null">
       <div class="word-info-box">
-        <div class="card-images">
-          <img :src="SERVER_BASE_URL +
-      '/image?fileName=' +
-      currentRow.PrevImageFileName
-      " />
-          <img :src="SERVER_BASE_URL +
-      '/image?fileName=' +
-      currentRow.NextImageFileName
-      " />
-        </div>
-        <hr />
-        <div class="d-flex justify-content-between">
-          <div>
-            <el-tag v-for="tag in currentRow.Tags">{{ tag }}</el-tag>
-          </div>
-          <div>
-            <el-button @click="() => deleteWord(currentRow!.NoteId)" type="danger">Remove</el-button>
-          </div>
-        </div>
-        <hr />
         <div>
           <div class="mt-2">
             <label>Lemma</label>
             <el-input v-model="currentRow.Lemma"></el-input>
           </div>
-          <div class="mt-2">
+          <!-- <div class="mt-2">
             <label>Word</label>
             <el-input v-model="currentRow.Word"></el-input>
-          </div>
+          </div> -->
           <div class="mt-2">
             <label>IPA</label>
             <el-input v-model="currentRow.IPA"></el-input>
           </div>
+
           <div class="mt-2">
             <label>Word Definition</label>
             <el-input autosize type="textarea" v-model="currentRow.WordDefinition"></el-input>
           </div>
 
           <div class="mt-2">
+            <label>Type</label>
+            <el-input @keydown.enter="goToNextWord" v-model="typeText"></el-input>
+          </div>
+          <div class="mt-2">
             <div class="d-flex justify-content-start">
               <label>Context</label>
               <div class="ms-5 mb-2 d-flex justify-content-between flex-grow-1">
                 <div>
+                  <el-button @click="() => playContextAudio(null)" type="primary">Replay Audio</el-button>
+                </div>
+                <div>
                   <el-button @click="highLightWord" type="warning">Highlight</el-button>
+                </div>
+                <div>
+                  <el-button @click="() => deleteWord(currentRow!.NoteId)" type="danger">Remove</el-button>
                 </div>
               </div>
             </div>
@@ -87,8 +81,10 @@
               style="margin-bottom: 2px">
             </QuillEditor>
           </div>
-          <div>
-            <el-button @click="() => playContextAudio(null)" type="primary">Replay Audio</el-button>
+          <div class="d-flex justify-content-between">
+            <div>
+              <el-tag v-for="tag in currentRow.Tags">{{ tag }}</el-tag>
+            </div>
           </div>
           <div class="mt-2">
             <label>Context Translation</label>
@@ -102,6 +98,13 @@
 
           <br />
         </div>
+
+        <div class="card-images">
+          <img :src="SERVER_BASE_URL + '/image?fileName=' + currentRow.ImageFileName
+            " />
+        </div>
+        <hr />
+
       </div>
     </el-col>
   </el-row>
@@ -138,6 +141,7 @@ const searchText = ref<string>("");
 const currentRow = ref<LessonWordModel | null>(null);
 const singleTableRef = ref<InstanceType<typeof ElTable>>();
 const lessonWords = ref<LessonWordModel[]>([]);
+const typeText = ref<string | null>("")
 
 onMounted(() => {
   getLessonWord();
@@ -172,10 +176,7 @@ const getLessonWord = () => {
             ).toDate(),
             IPA: item["fields"]["IPA"].value,
             Lemma: item["fields"]["Lemma"].value,
-            NextImageFileName:
-              item["fields"]["Next Image media filename"].value,
-            PrevImageFileName:
-              item["fields"]["Previous Image media filename"].value,
+            ImageFileName: item["fields"]["Next Image media filename"].value,
             Word: item["fields"]["Word"].value,
             WordDefinition: item["fields"]["Word definition"].value,
             NoteId: item.noteId,
@@ -190,7 +191,7 @@ const getLessonWord = () => {
           }
           return 0;
         });
-        singleTableRef.value?.doLayout()
+        singleTableRef.value?.doLayout();
       }
     })
     .catch((res) => {
@@ -210,7 +211,7 @@ const onCurrentRowChange = (prevRow: LessonWordModel | null) => {
   if (prevRow) {
     updateLRWord(prevRow);
   }
-  playMedia(prevRow)
+  playMedia(prevRow);
 };
 
 const playMedia = (prevRow: LessonWordModel | null) => {
@@ -218,9 +219,9 @@ const playMedia = (prevRow: LessonWordModel | null) => {
     playContextAudio(prevRow);
   }
   if (props.autoPlayAudio && props.voiceType == "Word") {
-    playWordVoice()
+    playWordVoice();
   }
-}
+};
 
 const updateLRWord = (lrWord: LessonWordModel) => {
   ajax
@@ -248,34 +249,37 @@ const highLightAllWord = () => {
       item.Context = item.Context.replace(
         item.Word,
         `<span style="background-color: rgb(255, 170, 0);">${item.Word}</span>`
-      )
-      item.Context = "<p>" + item.Context + "</p>"
+      );
+      item.Context = "<p>" + item.Context + "</p>";
     }
-  })
-  saveHighlightWords()
-}
+  });
+  saveHighlightWords();
+};
 
 const saveHighlightWords = () => {
   let wordContextList = lessonWords.value.map(({ NoteId, Context }) => ({
     NoteId,
-    Context
-  }))
+    Context,
+  }));
   ElMessageBox.confirm("Note data is gonna change. Are you sure?", "Warning", {
     confirmButtonText: "Update",
     cancelButtonText: "Cancel",
-    type: "warning"
-  }).then(() => {
-    ajax.post("/highlight-words", JSON.stringify(wordContextList)).then((res) => {
-      if (res.status === 200) {
-        ElMessage({
-          type: "success",
-          message: "All notes are highlighted",
+    type: "warning",
+  })
+    .then(() => {
+      ajax
+        .post("/highlight-words", JSON.stringify(wordContextList))
+        .then((res) => {
+          if (res.status === 200) {
+            ElMessage({
+              type: "success",
+              message: "All notes are highlighted",
+            });
+          }
         });
-      }
     })
-  }).catch(()=>{})
-
-}
+    .catch(() => { });
+};
 
 const deleteWord = (noteId: string) => {
   ElMessageBox.confirm("Permanently delete the word. Continue?", "Warning", {
@@ -286,7 +290,7 @@ const deleteWord = (noteId: string) => {
     .then(() => {
       ajax
         .get<AnkiResponseModel>(
-          `delete-note?noteId=${noteId}&audioFileName=${currentRow.value?.AudioFileName}&nextImageFileName=${currentRow.value?.NextImageFileName}&prevImageFileName=${currentRow.value?.PrevImageFileName}`
+          `delete-note?noteId=${noteId}&audioFileName=${currentRow.value?.AudioFileName}&prevImageFileName=${currentRow.value?.ImageFileName}`
         )
         .then((res) => {
           if (res.data.error == null) {
@@ -316,8 +320,7 @@ const playContextAudio = (previousRow: LessonWordModel | null) => {
   if (previousAudioElement instanceof HTMLAudioElement) {
     previousAudioElement.pause();
   }
-  currentAudioElement.play()
-
+  currentAudioElement.play();
 };
 
 const playWordVoice = () => {
@@ -325,15 +328,13 @@ const playWordVoice = () => {
     "word-voice-" + currentRow.value?.NoteId
   ) as HTMLAudioElement;
   if (currentAudioElement != null) {
-    currentAudioElement.play().then(_ => {
+    currentAudioElement.play().then((_) => {
       setTimeout(() => {
-        currentAudioElement.pause()
+        currentAudioElement.pause();
       }, 2000);
-    })
+    });
   }
-}
-
-
+};
 
 const highLightWord = () => {
   var selectText = window.getSelection()?.toString();
@@ -354,23 +355,11 @@ window.addEventListener("keydown", (e) => {
     targetElement.className != "el-input__inner" &&
     targetElement.className != "el-textarea__inner"
   ) {
-    if (e.key == "ArrowDown" && currentRow.value != null) {
-      var currentRowIndex = lessonWords.value.indexOf(currentRow.value);
-      if (currentRowIndex == lessonWords.value.length - 1) {
-        return;
-      }
-      singleTableRef.value?.setCurrentRow(
-        lessonWords.value[currentRowIndex + 1]
-      );
+    if (e.key == "ArrowDown") {
+      goToNextWord()
     }
-    if (e.key == "ArrowUp" && currentRow.value != null) {
-      var currentRowIndex = lessonWords.value.indexOf(currentRow.value);
-      if (currentRowIndex == 0) {
-        return;
-      }
-      singleTableRef.value?.setCurrentRow(
-        lessonWords.value[currentRowIndex - 1]
-      );
+    if (e.key == "ArrowUp") {
+      goToPreviousWord()
     }
     if (e.key == "r") {
       playMedia(null);
@@ -381,6 +370,31 @@ window.addEventListener("keydown", (e) => {
     highLightWord();
   }
 });
+
+const goToNextWord = () => {
+  if (currentRow.value != null) {
+    var currentRowIndex = lessonWords.value.indexOf(currentRow.value);
+    if (currentRowIndex == lessonWords.value.length - 1) {
+      return;
+    }
+    singleTableRef.value?.setCurrentRow(
+      lessonWords.value[currentRowIndex + 1]
+    );
+    typeText.value = null
+  }
+}
+
+const goToPreviousWord = () => {
+  if (currentRow.value != null) {
+    var currentRowIndex = lessonWords.value.indexOf(currentRow.value);
+    if (currentRowIndex == 0) {
+      return;
+    }
+    singleTableRef.value?.setCurrentRow(
+      lessonWords.value[currentRowIndex - 1]
+    );
+  }
+}
 </script>
 
 <style>

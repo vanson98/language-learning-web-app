@@ -73,7 +73,7 @@ import ReviewLessonWord from './components/ReviewLessonWord.vue'
 import ReviewLessonPhrase from './components/ReviewLessonPhrase.vue';
 import SERVER_BASE_URL from '@/libs/url';
 
-const videoId = ref<string>("")
+const videoId = ref<string>("Uew5BbvmLks")
 const selectNoteType = ref<number>(0)
 const autoPlayAudio = ref(false)
 const voiceType = ref("Context")

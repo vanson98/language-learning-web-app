@@ -7,8 +7,7 @@ export default interface LessonWordModel {
     DateCreated: Date,
     IPA: string,
     Lemma: string,
-    NextImageFileName: string,
-    PrevImageFileName: string,
+    ImageFileName: string,
     Word: string,
     WordDefinition: string,
     Tags: string[]
