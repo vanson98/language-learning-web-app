@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router"
 import Home from "../views/Home.vue"
-import SearchPhrase from "../views/SearchPhrase.vue"
+import PhraseManager from "@/views/PhraseManager.vue"
+import WordManager from "@/views/WordManager.vue"
 
 
 const routes: Array<RouteRecordRaw> = [
@@ -18,9 +19,13 @@ const routes: Array<RouteRecordRaw> = [
         component: Home,
     },
     {
-        path: "/search-phrase",
-        name: "search-phrase",
-        component: SearchPhrase,
+        path: "/phrase-manager",
+        name: "phrase-manager",
+        component: PhraseManager,
+    },
+    {
+        path: "/word-manager",
+        component: WordManager
     }
 ]
 

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <el-container>
+    <el-container style="height: 100vh;">
       <el-header style="height: auto;">
         <el-row class="mt-2">
           <el-col :span="3">
@@ -27,9 +27,12 @@
             <el-button type="primary" @click="openSearchPhraseDialog">Search Phrase</el-button>
           </el-col> -->
           <el-col :span="2">
-            <el-button>Insert Review Logs</el-button>
+            <el-button>Remove Media</el-button>
           </el-col>
-          <el-col :span="9">
+          <el-col :span="2">
+            <el-button>Restore Media</el-button>
+          </el-col>
+          <el-col :span="7">
             <div class="d-flex justify-content-end w-100">
               <el-upload 
                 :auto-upload="false" 
@@ -52,7 +55,7 @@
           </el-col>
         </el-row>
       </el-header>
-      <el-main style="height: 90vh;overflow: hidden;">
+      <el-main style="height: 100%; padding-top: 8px;">
         <ReviewLessonWord v-if="selectNoteType == 0" :video-id="videoId" :auto-play-audio="autoPlayAudio" :voice-type="voiceType">
         </ReviewLessonWord>
         <ReviewLessonPhrase v-if="selectNoteType == 1" :video-id="videoId" :auto-play-audio="autoPlayAudio">
@@ -73,7 +76,7 @@ import ReviewLessonWord from './components/ReviewLessonWord.vue'
 import ReviewLessonPhrase from './components/ReviewLessonPhrase.vue';
 import SERVER_BASE_URL from '@/libs/url';
 
-const videoId = ref<string>("Uew5BbvmLks")
+const videoId = ref<string>("")
 const selectNoteType = ref<number>(0)
 const autoPlayAudio = ref(false)
 const voiceType = ref("Context")

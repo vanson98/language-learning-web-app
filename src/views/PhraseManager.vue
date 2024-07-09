@@ -1,9 +1,9 @@
 <template>
   <el-container>
-    <el-header>
+    <el-header style="height: auto;">
       <el-button type="primary" @click="addPhrase">Add Phrase</el-button>
     </el-header>
-    <el-main>
+    <el-main style="padding-top: 0; padding-bottom: 0;">
       <el-row :gutter="20">
         <el-col :span="10">
           <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" remote :remote-method="searchNote" clearable

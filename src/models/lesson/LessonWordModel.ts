@@ -1,4 +1,5 @@
 export default interface LessonWordModel {
+    Index?: number,
     CardId: string,
     NoteId: string,
     AudioFileName: string,

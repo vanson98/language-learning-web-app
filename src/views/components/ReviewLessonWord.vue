@@ -1,5 +1,5 @@
 <template>
-  <el-row>
+  <el-row style="height: 5%;">
     <el-col :span="4">
       <el-input v-model="searchText" placeholder="Serch Phrase" @keyup.enter="getLessonWord"></el-input>
     </el-col>
@@ -14,9 +14,9 @@
       </div>
     </el-col>
   </el-row>
-  <el-row>
-    <el-col :span="14">
-      <el-table :data="lessonWords" ref="singleTableRef" style="width: 100%; height: 85vh" highlight-current-row
+  <el-row style="height: 95%;">
+    <el-col :span="15" style="height: 100%;">
+      <!-- <el-table :data="lessonWords" ref="singleTableRef" style="width: 100%; height: 85vh" highlight-current-row
         :row-key="'NoteId'" @current-change="handleCurrentRowChange">
         <el-table-column type="index" width="50" />
         <el-table-column property="Context" label="Context" min-width="200">
@@ -34,10 +34,20 @@
                 " type="audio/mpeg" />
             </audio>
           </template>
-        </el-table-column>
-      </el-table>
+</el-table-column>
+</el-table> -->
+      <el-auto-resizer>
+        <template #default="{ height, width }">
+          <el-table-v2 :columns="columns" :data="lessonWords" :width="width" :height="height" :sort-by="sortState"
+            @column-sort="onSort" fixed>
+
+          </el-table-v2>
+        </template>
+      </el-auto-resizer>
+
+
     </el-col>
-    <el-col :span="10" v-if="currentRow != null">
+    <el-col :span="9" v-if="currentRow != null">
       <div class="word-info-box">
         <div>
           <div class="mt-2">
@@ -121,6 +131,10 @@ import {
   ElMessageBox,
   ElTableColumn,
   ElButton,
+  ElTableV2,
+  ElAutoResizer,
+  SortBy,
+  TableV2SortOrder
 } from "element-plus";
 import SERVER_BASE_URL from "../../libs/url";
 import LessonWordModel from "../../models/lesson/LessonWordModel";
@@ -142,6 +156,45 @@ const currentRow = ref<LessonWordModel | null>(null);
 const singleTableRef = ref<InstanceType<typeof ElTable>>();
 const lessonWords = ref<LessonWordModel[]>([]);
 const typeText = ref<string | null>("")
+const sortState = ref<SortBy>({
+  key: 'Lemma',
+  order: TableV2SortOrder.ASC,
+})
+
+const columns = [
+  {
+    key: "Index",
+    dataKey: "Index",
+    title: "Index",
+    width: 75
+  },
+  {
+    key: "Lemma",
+    dataKey: "Lemma",
+    title: "Word",
+    sortable: true,
+    width: 150
+  },
+  {
+    key: "IPA",
+    dataKey: "IPA",
+    title: "IPA",
+    width: 150
+  },
+  {
+    key: "WordDefinition",
+    dataKey: "WordDefinition",
+    title: "Word Definition",
+    width: 250
+  },
+  {
+    key: "action",
+    dataKey: "action",
+    title: "Action",
+    width: 100
+  }
+]
+
 
 onMounted(() => {
   getLessonWord();
@@ -183,14 +236,7 @@ const getLessonWord = () => {
             Tags: item.tags,
           });
         });
-        lessonWords.value.sort((a, b): number => {
-          if (a.DateCreated < b.DateCreated) {
-            return -1;
-          } else if (a.DateCreated > b.DateCreated) {
-            return 1;
-          }
-          return 0;
-        });
+        sortWordByLemmaAsc()
         singleTableRef.value?.doLayout();
       }
     })
@@ -394,6 +440,29 @@ const goToPreviousWord = () => {
       lessonWords.value[currentRowIndex - 1]
     );
   }
+}
+
+const onSort = (sortBy: SortBy) => {
+  if(sortBy.order == 'asc'){
+    sortWordByLemmaAsc()
+  }else{
+    sortWordByLemmaDesc()
+  }
+  sortState.value = sortBy
+}
+
+const sortWordByLemmaAsc = () =>{
+  lessonWords.value.sort((a,b)=>a.Lemma.localeCompare(b.Lemma))
+  lessonWords.value.forEach((obj,index)=>{
+    obj.Index = index+1
+  })
+}
+
+const sortWordByLemmaDesc = () =>{
+  lessonWords.value.sort((a,b)=>b.Lemma.localeCompare(a.Lemma))
+  lessonWords.value.forEach((obj,index)=>{
+    obj.Index = index+1
+  })
 }
 </script>
 
