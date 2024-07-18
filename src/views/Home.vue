@@ -12,8 +12,11 @@
               </el-option>
             </el-select>
           </el-col>
-          <el-col :span="3">
-            <el-checkbox v-model="autoPlayAudio" label="Auto Play Audio" size="large"></el-checkbox>
+          <el-col :span="4">
+            <div class="checkbox-ctn">
+              <el-checkbox v-model="autoPlayAudio" label="Auto Play Audio" size="large"></el-checkbox>
+              <el-checkbox v-model="autoHideUpdatedNote" label="Hide Updated Note" size="large"></el-checkbox>
+            </div>
           </el-col>
           <el-col :span="3">
             <el-select 
@@ -56,7 +59,12 @@
         </el-row>
       </el-header>
       <el-main style="height: 100%; padding-top: 8px;">
-        <ReviewLessonWord v-if="selectNoteType == 0" :video-id="videoId" :auto-play-audio="autoPlayAudio" :voice-type="voiceType">
+        <ReviewLessonWord v-if="selectNoteType == 0" 
+          :video-id="videoId" 
+          :auto-play-audio="autoPlayAudio" 
+          :auto-hide-updated-note="autoHideUpdatedNote" 
+          :voice-type="voiceType"
+          ref="reviewLessonWordComponent">
         </ReviewLessonWord>
         <ReviewLessonPhrase v-if="selectNoteType == 1" :video-id="videoId" :auto-play-audio="autoPlayAudio">
         </ReviewLessonPhrase>
@@ -78,8 +86,9 @@ import SERVER_BASE_URL from '@/libs/url';
 
 const videoId = ref<string>("")
 const selectNoteType = ref<number>(0)
-const autoPlayAudio = ref(false)
-const voiceType = ref("Context")
+const autoPlayAudio = ref(true)
+const autoHideUpdatedNote = ref(true)
+const voiceType = ref("Word")
 const uploadRef = ref<UploadInstance>()
 const alertMessage = ref("")
 const noteTypeOptions = [
@@ -92,7 +101,6 @@ const noteTypeOptions = [
     label: "Phrase"
   }
 ]
-
 
 const submitUploadFileContent = () => {
   ElMessageBox.confirm(
@@ -162,6 +170,12 @@ body {
 }
 .el-alert:first-child {
   margin: 0;
+}
+.checkbox-ctn{
+  margin-top: -7px;
+}
+.checkbox-ctn>label{
+  height: 20px !important;
 }
 </style>
 

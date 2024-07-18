@@ -1,7 +1,6 @@
 export default interface LessonWordModel {
-    Index?: number,
-    CardId: string,
-    NoteId: string,
+    CardId: number,
+    NoteId: number,
     AudioFileName: string,
     Context: string,
     ContextTranslation: string,
@@ -11,5 +10,7 @@ export default interface LessonWordModel {
     ImageFileName: string,
     Word: string,
     WordDefinition: string,
-    Tags: string[]
+    Status: number,
+    Checked: boolean,
+    Tags: string[],
 }
