@@ -44,14 +44,14 @@
                 <ElCheckbox :v-model:model-value="allSelected" @change="(value) => onAllRowSelectionChange(value)" />
               </template>
             </template>
-            
-            <template #cell="{ rowData, column }">
+
+            <template #cell="{ rowData, column, rowIndex }">
               <template v-if="column.key == 'selection'">
                 <el-checkbox v-model:model-value="rowData.Checked" />
-                <audio :id="'card-audio-' + rowData.NoteId" preload="auto" :key="rowData.AudioFileName">
+                <audio :id="'card-audio-' + rowData.NoteId" preload="auto" :key="'ca' + rowData.NoteId">
                   <source :src="SERVER_BASE_URL + '/audio?fileName=' + rowData.AudioFileName" type="audio/mpeg" />
                 </audio>
-                <audio :id="'word-voice-' + rowData.NoteId" preload="auto" :key="rowData.Lemma">
+                <audio :id="'word-voice-' + rowData.NoteId" preload="auto" :key="'wv' + rowData.NoteId">
                   <source :src="SERVER_BASE_URL + '/word-voice?fileName=' + rowData.Lemma + '.mp3'" type="audio/mpeg" />
                 </audio>
               </template>
@@ -60,14 +60,14 @@
               </template>
               <template v-if="column.key === 'status'">
                 <el-radio-group :model-value="rowData.Status" class="ml-4"
-                  @change="(value) => onNoteLevelChange(rowData, value)" :key="rowData.NoteId" >
+                  @change="(value) => changeWordStatus(rowData, value, false)" :key="rowData.NoteId">
                   <el-radio-button :value="1" size="large">New</el-radio-button>
                   <el-radio-button :value="2" size="large">Rec</el-radio-button>
                   <el-radio-button :value="3" size="large">Fam</el-radio-button>
                   <el-radio-button :value="4" size="large">Ler</el-radio-button>
                   <el-radio-button :value="5" size="large">Knw</el-radio-button>
                 </el-radio-group>
-               
+
               </template>
               <!-- <template v-else-if="rowData != null">
                 {{ rowData[column.key] }}
@@ -107,7 +107,10 @@
               <label>Context</label>
               <div class="ms-5 mb-2 d-flex justify-content-between flex-grow-1">
                 <div>
-                  <el-button @click="() => playContextAudio('card-audio-')" type="primary">Replay Audio</el-button>
+                  <el-button @click="() => playAudio('card-audio-')" type="primary">Replay Audio</el-button>
+                </div>
+                <div>
+                  <el-button @click="() => updateWord(currRow,false)" type="primary">Update</el-button>
                 </div>
                 <div>
                   <el-button @click="highLightWord" type="warning">Highlight</el-button>
@@ -181,7 +184,7 @@ const props = defineProps<{
   voiceType: string;
   autoHideUpdatedNote: boolean;
 }>();
-let rootData : LessonWordModel[];
+let rootData: LessonWordModel[];
 const lessonWords = ref<LessonWordModel[]>([]);
 
 const typeText = ref<string | null>("")
@@ -201,10 +204,11 @@ const recognizedWordAmount = ref<number>(0)
 const familiarWordAmount = ref<number>(0)
 const learnedWordAmount = ref<number>(0)
 const knownWordAmount = ref<number>(0)
-let updatedStatusWordIds : number[] = []
+let updatedStatusWordIds: number[] = []
 const isHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
+let multipleSelection = false
 
-watch(isHideUpdatedNoteProp,(newvalue,oldVaue)=>{
+watch(isHideUpdatedNoteProp, (newvalue, oldVaue) => {
   filterWords()
 })
 
@@ -267,7 +271,7 @@ const getLessonWord = () => {
       }
       if (res.data.result != null) {
         rootData = [];
-        totalWord.value=0;
+        totalWord.value = 0;
         res.data?.result.forEach((item: any) => {
           var word: LessonWordModel = {
             CardId: item.cards[0],
@@ -302,17 +306,17 @@ const getLessonWord = () => {
 };
 
 
-const filterWords = ()=>{
-  if(!searchText.value){
+const filterWords = () => {
+  if (!searchText.value) {
     lessonWords.value = rootData
-  } else if(searchText.value.includes("st:")){
+  } else if (searchText.value.includes("st:")) {
     var status = parseInt(searchText.value.substring(3))
-    lessonWords.value = rootData.filter((w)=>w.Status == status)
+    lessonWords.value = rootData.filter((w) => w.Status == status)
   } else {
-    lessonWords.value = rootData.filter((w)=>w.Lemma.includes(searchText.value)||w.WordDefinition.includes(searchText.value))
+    lessonWords.value = rootData.filter((w) => w.Lemma.includes(searchText.value) || w.WordDefinition.includes(searchText.value))
   }
-  if(props.autoHideUpdatedNote){
-    lessonWords.value = lessonWords.value.filter(w=>!updatedStatusWordIds.includes(w.NoteId))
+  if (props.autoHideUpdatedNote) {
+    lessonWords.value = lessonWords.value.filter(w => !updatedStatusWordIds.includes(w.NoteId))
   }
   scanAllWordStatus()
   sortWordByLemmaAsc()
@@ -326,7 +330,7 @@ const getRowProps = (row: any) => {
 
 const handleRowClick = (event: any, row: any) => {
   var target = event.target as HTMLElement
-  if (target.className.includes("el-radio") || target.className.includes("el-checkbox")) {
+  if (target.className.includes("el-radio")) {
     return
   }
   var rowClicked = row.rowData as LessonWordModel
@@ -340,7 +344,7 @@ const handleRowClick = (event: any, row: any) => {
   playMedia()
 }
 
-const rowClass = ({rowData} : Parameters<RowClassNameGetter<any>>[0]) => {
+const rowClass = ({ rowData }: Parameters<RowClassNameGetter<any>>[0]) => {
   if (rowData.NoteId === currRow.value?.NoteId) {
     return 'highlight-row'
   } else {
@@ -348,35 +352,48 @@ const rowClass = ({rowData} : Parameters<RowClassNameGetter<any>>[0]) => {
   }
 }
 
-const playMedia = () => {
-  if (props.autoPlayAudio && props.voiceType == "Context") {
-    playContextAudio("card-audio-");
+const updateWord = (word: LessonWordModel | null,fromSelection: boolean) => {
+  if (word == null) {
+    return
   }
-  if (props.autoPlayAudio && props.voiceType == "Word") {
-    playContextAudio("word-voice-");
-  }
-};
-
-const updateLRWord = (lrWord: LessonWordModel) => {
   ajax.post<AnkiResponseModel>(
     "/lr-word",
     JSON.stringify({
-      NoteId: lrWord.NoteId,
-      Lemma: lrWord.Lemma,
-      Word: lrWord.Word,
-      IPA: lrWord.IPA,
-      "Word definition": lrWord.WordDefinition,
-      Context: lrWord.Context,
-      "Context translation": lrWord.ContextTranslation
+      NoteId: word.NoteId,
+      Lemma: word.Lemma,
+      Word: word.Word,
+      IPA: word.IPA,
+      "Word definition": word.WordDefinition,
+      Context: word.Context,
+      "Context translation": word.ContextTranslation
     })
   )
-    .then((res) => { })
+    .then((res) => {
+      if (props.autoHideUpdatedNote && !fromSelection) {
+        //--> auto move current row to next row or next checked row
+        var wordIndex = lessonWords.value.indexOf(word)
+        // priority for checked row
+        var nextRowIndex = lessonWords.value.findIndex((w, idx) => w.Checked)
+        if (nextRowIndex == -1) {
+          nextRowIndex = lessonWords.value.findIndex((w, idx) => idx == wordIndex + 1)
+        }
+        if (nextRowIndex != -1) {
+          prevRow = currRow.value
+          currRow.value = lessonWords.value[nextRowIndex]
+          playMedia()
+        }
+      }
+
+      setTimeout(() => {
+        recordUpdatedStatusWord(word, wordIndex)
+      }, 3000);
+    })
     .catch((res) => {
       console.error(res);
     });
 };
 
-const onNoteLevelChange = (word: LessonWordModel, newStatus: any) => {
+const changeWordStatus = (word: LessonWordModel, newStatus: any, fromSelection: boolean) => {
   var updateStatusModel = {
     NoteId: word.NoteId,
     Status: newStatus.toString(),
@@ -395,9 +412,7 @@ const onNoteLevelChange = (word: LessonWordModel, newStatus: any) => {
         } else {
           analyzeWordStatus(newStatus, word.Status)
           word.Status = newStatus
-          // Optimize
-          updateLRWord(word);
-          recordUpdatedStatusWord(word)
+          updateWord(word, fromSelection)
         }
       }
     })
@@ -476,7 +491,16 @@ const deleteWord = (noteId: number) => {
     .catch(() => { });
 };
 
-const playContextAudio = (type: string) => {
+const playMedia = () => {
+  if (props.autoPlayAudio && props.voiceType == "Context") {
+    playAudio("card-audio-");
+  }
+  if (props.autoPlayAudio && props.voiceType == "Word") {
+    playAudio("word-voice-");
+  }
+};
+
+const playAudio = (type: string) => {
   var prevAudioElement = document.getElementById(
     type + prevRow?.NoteId
   ) as HTMLAudioElement;
@@ -488,6 +512,7 @@ const playContextAudio = (type: string) => {
     prevAudioElement.pause();
   }
   if (currAudioElement != null && currAudioElement.readyState >= 3) {
+
     currAudioElement.play();
   }
 };
@@ -623,7 +648,7 @@ const levelUpStatus = () => {
   lessonWords.value.forEach((w) => {
     if (w.Checked && w.Status < 5) {
       var newStatus = w.Status + 1;
-      onNoteLevelChange(w, newStatus)
+      changeWordStatus(w, newStatus, true)
     }
   })
 }
@@ -632,20 +657,19 @@ const levelDownStatus = () => {
   lessonWords.value.forEach((w) => {
     if (w.Checked && w.Status > 1) {
       var newStatus = w.Status - 1
-      onNoteLevelChange(w, newStatus)
+      changeWordStatus(w, newStatus, true)
     }
   })
 }
 
-const recordUpdatedStatusWord = (word: LessonWordModel) =>{
-  if(updatedStatusWordIds.includes(word.NoteId)){
+const recordUpdatedStatusWord = (word: LessonWordModel, wordIndex: number) => {
+  if (updatedStatusWordIds.includes(word.NoteId)) {
     return
-  }else{
+  } else {
     updatedStatusWordIds.push(word.NoteId)
     updatedWord.value++
-    if(props.autoHideUpdatedNote){
-      var wordIndex = lessonWords.value.indexOf(word)
-      lessonWords.value.splice(wordIndex,1)
+    if (props.autoHideUpdatedNote) {
+      lessonWords.value.splice(wordIndex, 1)
     }
   }
 }
