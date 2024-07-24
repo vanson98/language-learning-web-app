@@ -206,7 +206,7 @@ const learnedWordAmount = ref<number>(0)
 const knownWordAmount = ref<number>(0)
 let updatedStatusWordIds: number[] = []
 const isHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
-let multipleSelection = false
+
 
 watch(isHideUpdatedNoteProp, (newvalue, oldVaue) => {
   filterWords()
@@ -292,7 +292,8 @@ const getLessonWord = () => {
             Status: +item["fields"]["Status"].value,
             NoteId: item.noteId,
             Tags: item.tags,
-            Checked: false
+            Checked: false,
+            Updated: false
           };
           totalWord.value++
           rootData.push(word)
@@ -316,7 +317,8 @@ const filterWords = () => {
     lessonWords.value = rootData.filter((w) => w.Lemma.includes(searchText.value) || w.WordDefinition.includes(searchText.value))
   }
   if (props.autoHideUpdatedNote) {
-    lessonWords.value = lessonWords.value.filter(w => !updatedStatusWordIds.includes(w.NoteId))
+    lessonWords.value.forEach(w=>w.Checked = false)
+    lessonWords.value = lessonWords.value.filter(w => !w.Updated)
   }
   scanAllWordStatus()
   sortWordByLemmaAsc()
@@ -382,11 +384,13 @@ const updateWord = (word: LessonWordModel | null,fromSelection: boolean) => {
           currRow.value = lessonWords.value[nextRowIndex]
           playMedia()
         }
+      }else if(props.autoHideUpdatedNote && fromSelection){
+        word.Checked = false
       }
-
+      word.Updated = true
       setTimeout(() => {
         recordUpdatedStatusWord(word, wordIndex)
-      }, 3000);
+      }, 1000);
     })
     .catch((res) => {
       console.error(res);
