@@ -12,5 +12,6 @@ export default interface LessonWordModel {
     WordDefinition: string,
     Status: number,
     Checked: boolean,
+    Updated: boolean,
     Tags: string[],
 }
