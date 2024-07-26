@@ -10,6 +10,7 @@ export default interface LessonWordModel {
     ImageFileName: string,
     Word: string,
     WordDefinition: string,
+    VideoTitle: string | null,
     Status: number,
     Checked: boolean,
     Updated: boolean,

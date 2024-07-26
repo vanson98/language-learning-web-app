@@ -23,8 +23,8 @@
       </div>
     </el-col>
   </el-row>
-  <el-row style="height: 95%;">
-    <el-col :span="15" style="height: 100%;">
+  <el-row style="height: 95%; border: 1px solid; border-color: #8080806f;">
+    <el-col :span="15" style="height: 100%;padding-right: 8px;">
       <!-- 
       <el-table :data="lessonWords" ref="singleTableRef" style="width: 100%; height: 85vh" highlight-current-row
         :row-key="'NoteId'" @current-change="handleCurrentRowChange">
@@ -77,20 +77,26 @@
         </template>
       </el-auto-resizer>
     </el-col>
-    <el-col :span="9" v-if="currRow != null">
+    <el-col :span="9" v-if="currRow != null" style="height: 100%;">
       <div class="word-info-box">
         <div>
+          <div class="card-images">
+            <img :src="SERVER_BASE_URL + '/image?fileName=' + currRow.ImageFileName" />
+            <strong>{{ currRow.VideoTitle }}</strong>
+          </div>
           <div class="mt-2">
             <label>Lemma</label>
             <el-input v-model="currRow.Lemma"></el-input>
           </div>
-          <!-- <div class="mt-2">
-            <label>Word</label>
-            <el-input v-model="currentRow.Word"></el-input>
-          </div> -->
-          <div class="mt-2">
-            <label>IPA</label>
-            <el-input v-model="currRow.IPA"></el-input>
+          <div class="mt-2 d-flex justify-content-between" >
+            <div class="w-100 pe-2">
+              <label>IPA</label>
+              <el-input v-model="currRow.IPA"></el-input>
+            </div>
+            <div class="w-100">
+              <label>Type</label>
+              <el-input @keydown.enter="goToNextWord" v-model="typeText"></el-input>
+            </div>
           </div>
 
           <div class="mt-2">
@@ -98,10 +104,7 @@
             <el-input autosize type="textarea" v-model="currRow.WordDefinition"></el-input>
           </div>
 
-          <div class="mt-2">
-            <label>Type</label>
-            <el-input @keydown.enter="goToNextWord" v-model="typeText"></el-input>
-          </div>
+
           <div class="mt-2">
             <div class="d-flex justify-content-start">
               <label>Context</label>
@@ -110,7 +113,7 @@
                   <el-button @click="() => playAudio('card-audio-')" type="primary">Replay Audio</el-button>
                 </div>
                 <div>
-                  <el-button @click="() => updateWord(currRow,false)" type="primary">Update</el-button>
+                  <el-button @click="() => updateWord(currRow, false)" type="primary">Update</el-button>
                 </div>
                 <div>
                   <el-button @click="highLightWord" type="warning">Highlight</el-button>
@@ -139,9 +142,7 @@
           </div>
           <br />
         </div>
-        <div class="card-images">
-          <img :src="SERVER_BASE_URL + '/image?fileName=' + currRow.ImageFileName" />
-        </div>
+
         <hr />
 
       </div>
@@ -289,6 +290,7 @@ const getLessonWord = () => {
             ImageFileName: item["fields"]["Next Image media filename"].value,
             Word: item["fields"]["Word"].value,
             WordDefinition: item["fields"]["Word definition"].value,
+            VideoTitle: item["fields"]["Video title"].value,
             Status: +item["fields"]["Status"].value,
             NoteId: item.noteId,
             Tags: item.tags,
@@ -317,7 +319,7 @@ const filterWords = () => {
     lessonWords.value = rootData.filter((w) => w.Lemma.includes(searchText.value) || w.WordDefinition.includes(searchText.value))
   }
   if (props.autoHideUpdatedNote) {
-    lessonWords.value.forEach(w=>w.Checked = false)
+    lessonWords.value.forEach(w => w.Checked = false)
     lessonWords.value = lessonWords.value.filter(w => !w.Updated)
   }
   scanAllWordStatus()
@@ -354,7 +356,7 @@ const rowClass = ({ rowData }: Parameters<RowClassNameGetter<any>>[0]) => {
   }
 }
 
-const updateWord = (word: LessonWordModel | null,fromSelection: boolean) => {
+const updateWord = (word: LessonWordModel | null, fromSelection: boolean) => {
   if (word == null) {
     return
   }
@@ -384,7 +386,7 @@ const updateWord = (word: LessonWordModel | null,fromSelection: boolean) => {
           currRow.value = lessonWords.value[nextRowIndex]
           playMedia()
         }
-      }else if(props.autoHideUpdatedNote && fromSelection){
+      } else if (props.autoHideUpdatedNote && fromSelection) {
         word.Checked = false
       }
       word.Updated = true
@@ -682,10 +684,11 @@ const recordUpdatedStatusWord = (word: LessonWordModel, wordIndex: number) => {
 <style>
 .word-info-box {
   width: 100%;
-  height: 90vh;
-  border: 1px solid;
-  padding: 10px;
+  height: 100%;
+  padding: 0 8px;
   overflow: scroll;
+  border-left: 1px solid;
+  border-color: #8080806f;
 }
 
 .highlight-row {

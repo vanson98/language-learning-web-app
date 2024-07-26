@@ -158,7 +158,7 @@ body {
 
 .card-images {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   grid-gap: 7px;
 }
 
