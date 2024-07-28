@@ -13,6 +13,5 @@ export default interface LessonWordModel {
     VideoTitle: string | null,
     Status: number,
     Checked: boolean,
-    Updated: boolean,
     Tags: string[],
 }

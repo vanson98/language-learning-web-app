@@ -60,7 +60,7 @@
               </template>
               <template v-if="column.key === 'status'">
                 <el-radio-group :model-value="rowData.Status" class="ml-4"
-                  @change="(value) => changeWordStatus(rowData, value, false)" :key="rowData.NoteId">
+                  @change="(value) => updateWord(rowData, false, value as number)" :key="rowData.NoteId">
                   <el-radio-button :value="1" size="large">New</el-radio-button>
                   <el-radio-button :value="2" size="large">Rec</el-radio-button>
                   <el-radio-button :value="3" size="large">Fam</el-radio-button>
@@ -88,7 +88,7 @@
             <label>Lemma</label>
             <el-input v-model="currRow.Lemma"></el-input>
           </div>
-          <div class="mt-2 d-flex justify-content-between" >
+          <div class="mt-2 d-flex justify-content-between">
             <div class="w-100 pe-2">
               <label>IPA</label>
               <el-input v-model="currRow.IPA"></el-input>
@@ -113,7 +113,8 @@
                   <el-button @click="() => playAudio('card-audio-')" type="primary">Replay Audio</el-button>
                 </div>
                 <div>
-                  <el-button @click="() => updateWord(currRow, false)" type="primary">Update</el-button>
+                  <el-button @click="() => updateWord(currRow, false, currRow!.Status)"
+                    type="primary">Update</el-button>
                 </div>
                 <div>
                   <el-button @click="highLightWord" type="warning">Highlight</el-button>
@@ -294,8 +295,7 @@ const getLessonWord = () => {
             Status: +item["fields"]["Status"].value,
             NoteId: item.noteId,
             Tags: item.tags,
-            Checked: false,
-            Updated: false
+            Checked: false
           };
           totalWord.value++
           rootData.push(word)
@@ -319,8 +319,7 @@ const filterWords = () => {
     lessonWords.value = rootData.filter((w) => w.Lemma.includes(searchText.value) || w.WordDefinition.includes(searchText.value))
   }
   if (props.autoHideUpdatedNote) {
-    lessonWords.value.forEach(w => w.Checked = false)
-    lessonWords.value = lessonWords.value.filter(w => !w.Updated)
+    lessonWords.value = lessonWords.value.filter(w => !updatedStatusWordIds.includes(w.NoteId))
   }
   scanAllWordStatus()
   sortWordByLemmaAsc()
@@ -356,7 +355,7 @@ const rowClass = ({ rowData }: Parameters<RowClassNameGetter<any>>[0]) => {
   }
 }
 
-const updateWord = (word: LessonWordModel | null, fromSelection: boolean) => {
+const updateWord = (word: LessonWordModel | null, fromSelection: boolean, newStatus: number) => {
   if (word == null) {
     return
   }
@@ -369,10 +368,19 @@ const updateWord = (word: LessonWordModel | null, fromSelection: boolean) => {
       IPA: word.IPA,
       "Word definition": word.WordDefinition,
       Context: word.Context,
-      "Context translation": word.ContextTranslation
+      "Context translation": word.ContextTranslation,
+      Status: newStatus.toString()
     })
   )
     .then((res) => {
+      if (res.status !== 200 && res.data.error) {
+        handleUpdateWordError(res.data.error, word.NoteId)
+        return
+      }
+      if (newStatus != word.Status) {
+        analyzeWordStatus(newStatus, word.Status)
+        word.Status = newStatus
+      }
       if (props.autoHideUpdatedNote && !fromSelection) {
         //--> auto move current row to next row or next checked row
         var wordIndex = lessonWords.value.indexOf(word)
@@ -389,45 +397,25 @@ const updateWord = (word: LessonWordModel | null, fromSelection: boolean) => {
       } else if (props.autoHideUpdatedNote && fromSelection) {
         word.Checked = false
       }
-      word.Updated = true
       setTimeout(() => {
-        recordUpdatedStatusWord(word, wordIndex)
-      }, 1000);
+        recordUpdatedStatusWord(word)
+      }, 2000);
     })
     .catch((res) => {
-      console.error(res);
+      handleUpdateWordError(res.response.data, word.NoteId)
     });
 };
 
-const changeWordStatus = (word: LessonWordModel, newStatus: any, fromSelection: boolean) => {
-  var updateStatusModel = {
-    NoteId: word.NoteId,
-    Status: newStatus.toString(),
+
+const handleUpdateWordError = (message: string, noteId: number) => {
+  ElMessage({
+    type: "error",
+    message: message,
+  });
+  var index = updatedStatusWordIds.indexOf(noteId)
+  if (index) {
+    updatedStatusWordIds.splice(index, 1)
   }
-  ajax.post<AnkiResponseModel>(
-    "/note-status",
-    JSON.stringify(updateStatusModel)
-  )
-    .then((res) => {
-      if (res.status === 200) {
-        if (res.data.error) {
-          ElMessage({
-            type: "error",
-            message: res.data.error,
-          });
-        } else {
-          analyzeWordStatus(newStatus, word.Status)
-          word.Status = newStatus
-          updateWord(word, fromSelection)
-        }
-      }
-    })
-    .catch((res) => {
-      ElMessage({
-        type: "error",
-        message: res.response.data,
-      });
-    });
 }
 
 const highLightAllWord = () => {
@@ -654,7 +642,7 @@ const levelUpStatus = () => {
   lessonWords.value.forEach((w) => {
     if (w.Checked && w.Status < 5) {
       var newStatus = w.Status + 1;
-      changeWordStatus(w, newStatus, true)
+      updateWord(w, true, newStatus)
     }
   })
 }
@@ -663,19 +651,19 @@ const levelDownStatus = () => {
   lessonWords.value.forEach((w) => {
     if (w.Checked && w.Status > 1) {
       var newStatus = w.Status - 1
-      changeWordStatus(w, newStatus, true)
+      updateWord(w, true, newStatus)
     }
   })
 }
 
-const recordUpdatedStatusWord = (word: LessonWordModel, wordIndex: number) => {
+const recordUpdatedStatusWord = (word: LessonWordModel) => {
   if (updatedStatusWordIds.includes(word.NoteId)) {
     return
   } else {
     updatedStatusWordIds.push(word.NoteId)
     updatedWord.value++
     if (props.autoHideUpdatedNote) {
-      lessonWords.value.splice(wordIndex, 1)
+      lessonWords.value = lessonWords.value.filter(w => !updatedStatusWordIds.includes(w.NoteId))
     }
   }
 }
