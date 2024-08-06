@@ -206,7 +206,7 @@ const recognizedWordAmount = ref<number>(0)
 const familiarWordAmount = ref<number>(0)
 const learnedWordAmount = ref<number>(0)
 const knownWordAmount = ref<number>(0)
-let updatedStatusWordIds: number[] = []
+let updatedNodeIds: number[] = []
 const isHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
 
 
@@ -256,6 +256,7 @@ const columns: Column<any>[] = [
 
 onMounted(() => {
   getLessonWord();
+  getUpdatedNoteIds()
 });
 
 const getLessonWord = () => {
@@ -308,6 +309,18 @@ const getLessonWord = () => {
     });
 };
 
+const getUpdatedNoteIds = () =>{
+  const today = new Date();
+  const year = String(today.getFullYear()).substring(2);
+  const month = String(today.getMonth() + 1).padStart(2,'0')
+  const day = String(today.getDate()).padStart(2,'0')
+  ajax.get<string[]>(`/updated-noteids?userid=${15091998}&date=${day+month+year}`).then((res)=>{
+    updatedNodeIds = res.data.map(Number)
+  }).catch((res)=>{
+    console.log(res)
+  })
+}
+
 
 const filterWords = () => {
   if (!searchText.value) {
@@ -319,7 +332,7 @@ const filterWords = () => {
     lessonWords.value = rootData.filter((w) => w.Lemma.includes(searchText.value) || w.WordDefinition.includes(searchText.value))
   }
   if (props.autoHideUpdatedNote) {
-    lessonWords.value = lessonWords.value.filter(w => !updatedStatusWordIds.includes(w.NoteId))
+    lessonWords.value = lessonWords.value.filter(w => !updatedNodeIds.includes(w.NoteId))
   }
   scanAllWordStatus()
   sortWordByLemmaAsc()
@@ -412,9 +425,9 @@ const handleUpdateWordError = (message: string, noteId: number) => {
     type: "error",
     message: message,
   });
-  var index = updatedStatusWordIds.indexOf(noteId)
+  var index = updatedNodeIds.indexOf(noteId)
   if (index) {
-    updatedStatusWordIds.splice(index, 1)
+    updatedNodeIds.splice(index, 1)
   }
 }
 
@@ -601,7 +614,7 @@ const scanAllWordStatus = () => {
   familiarWordAmount.value = 0
   learnedWordAmount.value = 0
   knownWordAmount.value = 0
-  updatedWord.value = updatedStatusWordIds.length
+  updatedWord.value = updatedNodeIds.length
   lessonWords.value.forEach((word) => {
     analyzeWordStatus(word.Status)
   })
@@ -657,16 +670,18 @@ const levelDownStatus = () => {
 }
 
 const recordUpdatedStatusWord = (word: LessonWordModel) => {
-  if (updatedStatusWordIds.includes(word.NoteId)) {
+  if (updatedNodeIds.includes(word.NoteId)) {
     return
   } else {
-    updatedStatusWordIds.push(word.NoteId)
+    updatedNodeIds.push(word.NoteId)
     updatedWord.value++
     if (props.autoHideUpdatedNote) {
-      lessonWords.value = lessonWords.value.filter(w => !updatedStatusWordIds.includes(w.NoteId))
+      lessonWords.value = lessonWords.value.filter(w => !updatedNodeIds.includes(w.NoteId))
     }
   }
 }
+
+
 </script>
 
 <style>
