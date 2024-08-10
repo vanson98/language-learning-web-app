@@ -2,10 +2,16 @@
 import axios from "axios";
 import AppConsts from "./appconst";
 const ajax = axios.create({
-  baseURL: AppConsts.remoteServiceBaseUrl,
+  baseURL: AppConsts.remoteServerBaseUrl,
   timeout: 300000,
   withCredentials: true
 });
+
+const crawAjax = axios.create({
+  baseURL: AppConsts.remoteCrawDataServerUrl,
+  timeout: 3000000,
+  withCredentials: true
+})
 
 // ajax.interceptors.response.use(response =>{
 //   return Promise.resolve(response)
@@ -31,4 +37,4 @@ const requestNewToken = ()=>{
   })
 }
 
-export default ajax;
+export { ajax,crawAjax};

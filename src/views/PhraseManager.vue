@@ -52,7 +52,7 @@
 
 import { ref } from 'vue';
 import { ElButton, ElCol, ElInput, ElRow, ElSelectV2, ElCard, ElMessage, ElInputNumber, ElContainer, ElMain, ElHeader } from 'element-plus';
-import ajax from '@/libs/ajax';
+import {ajax} from '@/libs/ajax';
 import { OptionType } from 'element-plus/es/components/select-v2/src/select.types';
 import NoteInfo from '@/models/note/NoteInfo'
 import { isStringNullOrEmpty } from "@/libs/util"

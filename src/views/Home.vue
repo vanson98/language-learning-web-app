@@ -29,12 +29,7 @@
           <!-- <el-col :span="3">
             <el-button type="primary" @click="openSearchPhraseDialog">Search Phrase</el-button>
           </el-col> -->
-          <el-col :span="2">
-            <el-button>Remove Media</el-button>
-          </el-col>
-          <el-col :span="2">
-            <el-button>Restore Media</el-button>
-          </el-col>
+       
           <el-col :span="7">
             <div class="d-flex justify-content-end w-100">
               <el-upload 
@@ -82,9 +77,9 @@ import {
 import { ref } from 'vue';
 import ReviewLessonWord from './components/ReviewLessonWord.vue'
 import ReviewLessonPhrase from './components/ReviewLessonPhrase.vue';
-import SERVER_BASE_URL from '@/libs/url';
+import {SERVER_BASE_URL} from '@/libs/url';
 
-const videoId = ref<string>("")
+const videoId = ref<string>("994992")
 const selectNoteType = ref<number>(0)
 const autoPlayAudio = ref(true)
 const autoHideUpdatedNote = ref(true)

@@ -1,4 +1,4 @@
-import ajax from "@/libs/ajax";
+import {ajax} from "@/libs/ajax";
 import AppConsts from "@/libs/appconst";
 
 const lessonService = {

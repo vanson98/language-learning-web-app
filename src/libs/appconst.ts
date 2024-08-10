@@ -1,6 +1,8 @@
-import url from "./url";
+import {SERVER_BASE_URL, SERVER_CRAW_DATA_URL} from "./url";
+
 const AppConsts = {
-  remoteServiceBaseUrl: url.endsWith("/") ? url.slice(0, -1) : url,
+  remoteServerBaseUrl: SERVER_BASE_URL.endsWith("/") ? SERVER_BASE_URL.slice(0, -1) : SERVER_BASE_URL,
+  remoteCrawDataServerUrl: SERVER_CRAW_DATA_URL.endsWith("/") ? SERVER_CRAW_DATA_URL.slice(0,-1) : SERVER_CRAW_DATA_URL,
   authorization: {
     encrptedAuthTokenName: "enc_auth_token",
     tokenName: "Abp.AuthToken",

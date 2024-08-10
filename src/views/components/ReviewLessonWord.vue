@@ -3,12 +3,26 @@
     <el-col :span="4">
       <el-input v-model="searchText" placeholder="st: " @keyup.enter="filterWords"></el-input>
     </el-col>
-    <el-col :span="8">
+    <el-col :span="4">
       <div class="action-control-ctn">
         <el-button @click="getLessonWord" type="primary">Load Data</el-button>
-        <el-button @click="highLightAllWord" type="warning">Highlight All</el-button>
-        <el-button @click="levelUpStatus" type="success">Status +1</el-button>
-        <el-button @click="levelDownStatus" type="warning">Status -1</el-button>
+        <el-dropdown>
+          <el-button type="primary">
+            Action
+          </el-button>
+          <template #dropdown>
+            <ElDropdownMenu>
+              <el-dropdown-item @click="levelUpStatus">Status +1</el-dropdown-item>
+              <el-dropdown-item @click="levelDownStatus">Status -1</el-dropdown-item>
+              <el-dropdown-item @click="highLightAllWord">Highlight All</el-dropdown-item>
+              <el-dropdown-item @click="fillIPAForWord">Fill IPA</el-dropdown-item>
+            </ElDropdownMenu>
+          </template>
+        </el-dropdown>
+
+        <!-- <el-button  type="warning"></el-button>
+        <el-button type="success">Status +1</el-button>
+        <el-button @ type="warning">Status -1</el-button> -->
       </div>
     </el-col>
     <el-col :span="12">
@@ -35,7 +49,7 @@
       -->
       <el-auto-resizer>
         <template #default="{ height, width }">
-          <el-table-v2 :columns="columns" :data="lessonWords" :width="width" :height="height" :sort-by="sortState"
+          <el-table-v2 :columns="columns" :data="lessonNodes" :width="width" :height="height" :sort-by="sortState"
             row-key="Index" @column-sort="onSort" :row-props="getRowProps" :row-class="rowClass" fixed
             ref="singleTableRef">
             <!-- Use the scoped slot to render the custom cell -->
@@ -60,7 +74,7 @@
               </template>
               <template v-if="column.key === 'status'">
                 <el-radio-group :model-value="rowData.Status" class="ml-4"
-                  @change="(value) => updateWord(rowData, false, value as number)" :key="rowData.NoteId">
+                  @change="(value) => updateNode(rowData, false, value as number)" :key="rowData.NoteId">
                   <el-radio-button :value="1" size="large">New</el-radio-button>
                   <el-radio-button :value="2" size="large">Rec</el-radio-button>
                   <el-radio-button :value="3" size="large">Fam</el-radio-button>
@@ -72,6 +86,14 @@
               <!-- <template v-else-if="rowData != null">
                 {{ rowData[column.key] }}
               </template> -->
+            </template>
+
+            <template #overlay v-if="loading">
+              <div class="el-loading-mask" style="display: flex; align-items: center; justify-content: center">
+                <ElIcon class="is-loading" color="var(--el-color-primary)" :size="26">
+                  <Loading />
+                </ElIcon>
+              </div>
             </template>
           </el-table-v2>
         </template>
@@ -113,7 +135,7 @@
                   <el-button @click="() => playAudio('card-audio-')" type="primary">Replay Audio</el-button>
                 </div>
                 <div>
-                  <el-button @click="() => updateWord(currRow, false, currRow!.Status)"
+                  <el-button @click="() => updateNode(currRow, false, currRow!.Status)"
                     type="primary">Update</el-button>
                 </div>
                 <div>
@@ -169,12 +191,17 @@ import {
   ElRadioGroup,
   ElRadioButton,
   ElCheckbox,
-  CheckboxValueType
+  CheckboxValueType,
+  ElDropdown,
+  ElDropdownMenu,
+  ElDropdownItem,
+  ElIcon
 } from "element-plus";
-import SERVER_BASE_URL from "../../libs/url";
+import { Loading  } from '@element-plus/icons-vue'
+import { SERVER_BASE_URL } from "../../libs/url";
 import LessonWordModel from "../../models/lesson/LessonWordModel";
 import { onMounted, ref, toRef, watch } from "vue";
-import ajax from "@/libs/ajax";
+import { ajax, crawAjax } from "@/libs/ajax";
 import AnkiResponseModel from "@/models/response/AnkiResponseModel";
 import moment from "moment";
 import { QuillEditor } from "@vueup/vue-quill";
@@ -187,7 +214,7 @@ const props = defineProps<{
   autoHideUpdatedNote: boolean;
 }>();
 let rootData: LessonWordModel[];
-const lessonWords = ref<LessonWordModel[]>([]);
+const lessonNodes = ref<LessonWordModel[]>([]);
 
 const typeText = ref<string | null>("")
 const searchText = ref<string>("");
@@ -206,6 +233,7 @@ const recognizedWordAmount = ref<number>(0)
 const familiarWordAmount = ref<number>(0)
 const learnedWordAmount = ref<number>(0)
 const knownWordAmount = ref<number>(0)
+const loading = ref<boolean>(false)
 let updatedNodeIds: number[] = []
 const isHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
 
@@ -260,6 +288,7 @@ onMounted(() => {
 });
 
 const getLessonWord = () => {
+  loading.value = true
   ajax
     .get<AnkiResponseModel>(
       `/lesson-words?vid=${props.videoId}`
@@ -301,22 +330,25 @@ const getLessonWord = () => {
           totalWord.value++
           rootData.push(word)
         });
+        
         filterWords()
       }
+      loading.value = false
     })
     .catch((res) => {
       console.log(res);
+      loading.value = false
     });
 };
 
-const getUpdatedNoteIds = () =>{
+const getUpdatedNoteIds = () => {
   const today = new Date();
   const year = String(today.getFullYear()).substring(2);
-  const month = String(today.getMonth() + 1).padStart(2,'0')
-  const day = String(today.getDate()).padStart(2,'0')
-  ajax.get<string[]>(`/updated-noteids?userid=${15091998}&date=${day+month+year}`).then((res)=>{
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  ajax.get<string[]>(`/updated-noteids?userid=${15091998}&date=${day + month + year}`).then((res) => {
     updatedNodeIds = res.data.map(Number)
-  }).catch((res)=>{
+  }).catch((res) => {
     console.log(res)
   })
 }
@@ -324,15 +356,15 @@ const getUpdatedNoteIds = () =>{
 
 const filterWords = () => {
   if (!searchText.value) {
-    lessonWords.value = rootData
+    lessonNodes.value = rootData
   } else if (searchText.value.includes("st:")) {
     var status = parseInt(searchText.value.substring(3))
-    lessonWords.value = rootData.filter((w) => w.Status == status)
+    lessonNodes.value = rootData.filter((w) => w.Status == status)
   } else {
-    lessonWords.value = rootData.filter((w) => w.Lemma.includes(searchText.value) || w.WordDefinition.includes(searchText.value))
+    lessonNodes.value = rootData.filter((w) => w.Lemma.includes(searchText.value) || w.WordDefinition.includes(searchText.value))
   }
   if (props.autoHideUpdatedNote) {
-    lessonWords.value = lessonWords.value.filter(w => !updatedNodeIds.includes(w.NoteId))
+    lessonNodes.value = lessonNodes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
   }
   scanAllWordStatus()
   sortWordByLemmaAsc()
@@ -368,7 +400,7 @@ const rowClass = ({ rowData }: Parameters<RowClassNameGetter<any>>[0]) => {
   }
 }
 
-const updateWord = (word: LessonWordModel | null, fromSelection: boolean, newStatus: number) => {
+const updateNode = (word: LessonWordModel | null, fromSelection: boolean, newStatus: number) => {
   if (word == null) {
     return
   }
@@ -396,15 +428,15 @@ const updateWord = (word: LessonWordModel | null, fromSelection: boolean, newSta
       }
       if (props.autoHideUpdatedNote && !fromSelection) {
         //--> auto move current row to next row or next checked row
-        var wordIndex = lessonWords.value.indexOf(word)
+        var wordIndex = lessonNodes.value.indexOf(word)
         // priority for checked row
-        var nextRowIndex = lessonWords.value.findIndex((w, idx) => w.Checked)
+        var nextRowIndex = lessonNodes.value.findIndex((w, idx) => w.Checked)
         if (nextRowIndex == -1) {
-          nextRowIndex = lessonWords.value.findIndex((w, idx) => idx == wordIndex + 1)
+          nextRowIndex = lessonNodes.value.findIndex((w, idx) => idx == wordIndex + 1)
         }
         if (nextRowIndex != -1) {
           prevRow = currRow.value
-          currRow.value = lessonWords.value[nextRowIndex]
+          currRow.value = lessonNodes.value[nextRowIndex]
           playMedia()
         }
       } else if (props.autoHideUpdatedNote && fromSelection) {
@@ -432,7 +464,7 @@ const handleUpdateWordError = (message: string, noteId: number) => {
 }
 
 const highLightAllWord = () => {
-  lessonWords.value.forEach((item) => {
+  lessonNodes.value.forEach((item) => {
     if (!item.Context.includes("</span>")) {
       item.Context = item.Context.replace(
         item.Word,
@@ -445,7 +477,7 @@ const highLightAllWord = () => {
 };
 
 const saveHighlightWords = () => {
-  let wordContextList = lessonWords.value.map(({ NoteId: NoteId, Context }) => ({
+  let wordContextList = lessonNodes.value.map(({ NoteId: NoteId, Context }) => ({
     NoteId,
     Context,
   }));
@@ -486,7 +518,7 @@ const deleteWord = (noteId: number) => {
               type: "success",
               message: "Delete completed",
             });
-            lessonWords.value = lessonWords.value.filter(
+            lessonNodes.value = lessonNodes.value.filter(
               (wordItem) => wordItem.NoteId != currRow.value?.NoteId
             );
           }
@@ -561,8 +593,8 @@ window.addEventListener("keydown", (e) => {
 
 const goToNextWord = () => {
   if (currRow.value != null) {
-    var currentRowIndex = lessonWords.value.indexOf(currRow.value);
-    if (currentRowIndex == lessonWords.value.length - 1) {
+    var currentRowIndex = lessonNodes.value.indexOf(currRow.value);
+    if (currentRowIndex == lessonNodes.value.length - 1) {
       return;
     }
     // singleTableRef.value?.setCurrentRow(
@@ -574,7 +606,7 @@ const goToNextWord = () => {
 
 const goToPreviousWord = () => {
   if (currRow.value != null) {
-    var currentRowIndex = lessonWords.value.indexOf(currRow.value);
+    var currentRowIndex = lessonNodes.value.indexOf(currRow.value);
     if (currentRowIndex == 0) {
       return;
     }
@@ -594,15 +626,15 @@ const onSort = (sortBy: SortBy) => {
 }
 
 const sortWordByLemmaAsc = () => {
-  lessonWords.value.sort((a, b) => a.Lemma.localeCompare(b.Lemma))
+  lessonNodes.value.sort((a, b) => a.Lemma.localeCompare(b.Lemma))
 }
 
 const sortWordByLemmaDesc = () => {
-  lessonWords.value.sort((a, b) => b.Lemma.localeCompare(a.Lemma))
+  lessonNodes.value.sort((a, b) => b.Lemma.localeCompare(a.Lemma))
 }
 
 const onAllRowSelectionChange = (value: CheckboxValueType) => {
-  lessonWords.value = lessonWords.value.map(word => {
+  lessonNodes.value = lessonNodes.value.map(word => {
     word.Checked = value as boolean
     return word
   })
@@ -615,7 +647,7 @@ const scanAllWordStatus = () => {
   learnedWordAmount.value = 0
   knownWordAmount.value = 0
   updatedWord.value = updatedNodeIds.length
-  lessonWords.value.forEach((word) => {
+  lessonNodes.value.forEach((word) => {
     analyzeWordStatus(word.Status)
   })
 }
@@ -652,19 +684,19 @@ const analyzeWordStatus = (currentStatus: number, previousStatus: number = 0) =>
 }
 
 const levelUpStatus = () => {
-  lessonWords.value.forEach((w) => {
+  lessonNodes.value.forEach((w) => {
     if (w.Checked && w.Status < 5) {
       var newStatus = w.Status + 1;
-      updateWord(w, true, newStatus)
+      updateNode(w, true, newStatus)
     }
   })
 }
 
 const levelDownStatus = () => {
-  lessonWords.value.forEach((w) => {
+  lessonNodes.value.forEach((w) => {
     if (w.Checked && w.Status > 1) {
       var newStatus = w.Status - 1
-      updateWord(w, true, newStatus)
+      updateNode(w, true, newStatus)
     }
   })
 }
@@ -676,11 +708,31 @@ const recordUpdatedStatusWord = (word: LessonWordModel) => {
     updatedNodeIds.push(word.NoteId)
     updatedWord.value++
     if (props.autoHideUpdatedNote) {
-      lessonWords.value = lessonWords.value.filter(w => !updatedNodeIds.includes(w.NoteId))
+      lessonNodes.value = lessonNodes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
     }
   }
 }
 
+const fillIPAForWord = () => {
+  var listSelectedWord = lessonNodes.value.filter(w => w.Checked).map(w => w.Lemma)
+  var requestData = {
+    RangeWord: listSelectedWord
+  }
+  var jsonRequestData = JSON.stringify(requestData)
+  loading.value = true
+  crawAjax.post("/get-words-phonetic", jsonRequestData).then((res) => {
+    if (res.data instanceof Array) {
+      res.data.forEach(p => {
+        const node = lessonNodes.value.find(n => n.Lemma == p.word)
+        if (node) {
+          node.IPA = p.phonetic
+          updateNode(node, true, node.Status)
+        }
+      })
+      loading.value = false
+    }
+  })
+}
 
 </script>
 
@@ -700,7 +752,7 @@ const recordUpdatedStatusWord = (word: LessonWordModel) => {
 
 .action-control-ctn {
   display: flex;
-  justify-content: center;
+  justify-content: space-evenly;
 }
 
 .word-status-ctn {
