@@ -197,7 +197,7 @@ import {
   ElDropdownItem,
   ElIcon
 } from "element-plus";
-import { Loading  } from '@element-plus/icons-vue'
+import { Loading } from '@element-plus/icons-vue'
 import { SERVER_BASE_URL } from "../../libs/url";
 import LessonWordModel from "../../models/lesson/LessonWordModel";
 import { onMounted, ref, toRef, watch } from "vue";
@@ -330,7 +330,7 @@ const getLessonWord = () => {
           totalWord.value++
           rootData.push(word)
         });
-        
+
         filterWords()
       }
       loading.value = false
@@ -444,7 +444,7 @@ const updateNode = (word: LessonWordModel | null, fromSelection: boolean, newSta
       }
       setTimeout(() => {
         recordUpdatedStatusWord(word)
-      }, 2000);
+      }, 20000);
     })
     .catch((res) => {
       handleUpdateWordError(res.response.data, word.NoteId)
@@ -532,7 +532,11 @@ const deleteWord = (noteId: number) => {
 
 const playMedia = () => {
   if (props.autoPlayAudio && props.voiceType == "Context") {
-    playAudio("card-audio-");
+    playAudio("word-voice-");
+    setTimeout(() => {
+      playAudio("card-audio-");
+    }, 2000);
+
   }
   if (props.autoPlayAudio && props.voiceType == "Word") {
     playAudio("word-voice-");
@@ -714,23 +718,29 @@ const recordUpdatedStatusWord = (word: LessonWordModel) => {
 }
 
 const fillIPAForWord = () => {
-  var listSelectedWord = lessonNodes.value.filter(w => w.Checked).map(w => w.Lemma)
+  var listSelectedWord = lessonNodes.value.filter(w => w.Checked && !w.IPA).map(w => ({ NoteId: w.NoteId, Word: w.Lemma }))
   var requestData = {
     RangeWord: listSelectedWord
   }
   var jsonRequestData = JSON.stringify(requestData)
-  loading.value = true
   crawAjax.post("/get-words-phonetic", jsonRequestData).then((res) => {
     if (res.data instanceof Array) {
       res.data.forEach(p => {
-        const node = lessonNodes.value.find(n => n.Lemma == p.word)
+        const node = lessonNodes.value.find(n => n.NoteId == p.noteId)
         if (node) {
           node.IPA = p.phonetic
-          updateNode(node, true, node.Status)
         }
       })
-      loading.value = false
+      ElMessage({
+        message: `get phonetic success`,
+        type: "success",
+      });
     }
+  }).catch(err => {
+    ElMessage({
+      message: `get phonetic error`,
+      type: "error",
+    });
   })
 }
 
