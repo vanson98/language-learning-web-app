@@ -100,12 +100,12 @@
 
 <script lang="ts" setup>
 import { ElTag, ElRow, ElCol, ElTable, ElTableColumn, ElButton, ElMessageBox, ElMessage, ElInput } from 'element-plus'
-import SERVER_BASE_URL from '../../libs/url'
+import {SERVER_BASE_URL} from '../../libs/url'
 import LRPhraseModel from '../../models/lesson/LRPhraseModel'
 import { onMounted, ref, toRefs } from 'vue';
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
-import ajax from '@/libs/ajax';
+import {ajax} from '@/libs/ajax';
 import AnkiResponseModel from '@/models/response/AnkiResponseModel';
 import moment from 'moment';
 import SearchPhraseDialog from '../modals/SearchPhraseDialog.vue'

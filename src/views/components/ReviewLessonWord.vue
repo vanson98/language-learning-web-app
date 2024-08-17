@@ -62,12 +62,6 @@
             <template #cell="{ rowData, column, rowIndex }">
               <template v-if="column.key == 'selection'">
                 <el-checkbox v-model:model-value="rowData.Checked" />
-                <audio :id="'card-audio-' + rowData.NoteId" preload="auto" :key="'ca' + rowData.NoteId">
-                  <source :src="SERVER_BASE_URL + '/audio?fileName=' + rowData.AudioFileName" type="audio/mpeg" />
-                </audio>
-                <audio :id="'word-voice-' + rowData.NoteId" preload="auto" :key="'wv' + rowData.NoteId">
-                  <source :src="SERVER_BASE_URL + '/word-voice?fileName=' + rowData.Lemma + '.mp3'" type="audio/mpeg" />
-                </audio>
               </template>
               <template v-if="column.key == 'tags'">
                 <el-tag v-for="tag in rowData.Tags">{{ tag }}</el-tag>
@@ -128,15 +122,22 @@
 
 
           <div class="mt-2">
-            <div class="d-flex justify-content-start">
-              <label>Context</label>
-              <div class="ms-5 mb-2 d-flex justify-content-between flex-grow-1">
+            
+              <div class=" mb-2 d-flex justify-content-between flex-grow-1">
                 <div>
-                  <el-button @click="() => playAudio('card-audio-')" type="primary">Replay Audio</el-button>
+                  <el-button @click="() => playAudio('context-voice')" type="primary">Replay Audio</el-button>
+                </div>
+                <div>
+                  <el-button @click="() => updateNode(currRow, false, currRow!.Status - 1)"
+                    type="info">Update -</el-button>
                 </div>
                 <div>
                   <el-button @click="() => updateNode(currRow, false, currRow!.Status)"
-                    type="primary">Update</el-button>
+                    type="default">Update</el-button>
+                </div>
+                <div>
+                  <el-button @click="() => updateNode(currRow, false, currRow!.Status + 1)"
+                    type="success">Update +</el-button>
                 </div>
                 <div>
                   <el-button @click="highLightWord" type="warning">Highlight</el-button>
@@ -145,7 +146,6 @@
                   <el-button @click="() => deleteWord(currRow!.NoteId)" type="danger">Remove</el-button>
                 </div>
               </div>
-            </div>
             <QuillEditor v-model:content="currRow.Context" toolbar="minimal" content-type="html"
               style="margin-bottom: 2px">
             </QuillEditor>
@@ -444,7 +444,8 @@ const updateNode = (word: LessonWordModel | null, fromSelection: boolean, newSta
       }
       setTimeout(() => {
         recordUpdatedStatusWord(word)
-      }, 20000);
+      }, 1000);
+      
     })
     .catch((res) => {
       handleUpdateWordError(res.response.data, word.NoteId)
@@ -532,32 +533,48 @@ const deleteWord = (noteId: number) => {
 
 const playMedia = () => {
   if (props.autoPlayAudio && props.voiceType == "Context") {
-    playAudio("word-voice-");
-    setTimeout(() => {
-      playAudio("card-audio-");
-    }, 2000);
-
+    playAudio("word-voice");
+    setTimeout(()=>{
+      playAudio("context-voice");
+    },1500)
   }
   if (props.autoPlayAudio && props.voiceType == "Word") {
-    playAudio("word-voice-");
+    playAudio("word-voice");
   }
 };
 
 const playAudio = (type: string) => {
-  var prevAudioElement = document.getElementById(
-    type + prevRow?.NoteId
-  ) as HTMLAudioElement;
-  var currAudioElement = document.getElementById(
-    type + currRow.value?.NoteId
-  ) as HTMLAudioElement;
+    var fileName = type === 'context-voice' ? currRow.value?.AudioFileName : currRow.value?.Lemma + ".mp3"
+    ajax.get(`/${type}?fileName=${fileName}`,{
+      responseType: 'arraybuffer'
+    }).then((res) => {
+      const arrayBuffer = res.data;
+      // Convert the ArrayBuffer to a Blob
+      const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+      // Create an object URL from the Blob
+      const url = URL.createObjectURL(blob);
+      // Create an audio element and play the MP3
+      const audio = new Audio(url);
+      audio.play();
+    }).catch(() => {
 
-  if (prevAudioElement != null && prevAudioElement.readyState >= 3) {
-    prevAudioElement.pause();
-  }
-  if (currAudioElement != null && currAudioElement.readyState >= 3) {
+    })
+ 
 
-    currAudioElement.play();
-  }
+  // var prevAudioElement = document.getElementById(
+  //   type + prevRow?.NoteId
+  // ) as HTMLAudioElement;
+  // var currAudioElement = document.getElementById(
+  //   type + currRow.value?.NoteId
+  // ) as HTMLAudioElement;
+
+  // if (prevAudioElement != null && prevAudioElement.readyState >= 3) {
+  //   prevAudioElement.pause();
+  // }
+  // if (currAudioElement != null && currAudioElement.readyState >= 3) {
+
+  //   currAudioElement.play();
+  // }
 };
 
 const highLightWord = () => {
@@ -580,13 +597,13 @@ window.addEventListener("keydown", (e) => {
     targetElement.className != "el-textarea__inner"
   ) {
     if (e.key == "ArrowDown") {
-      goToNextWord()
+      //goToNextWord()
     }
     if (e.key == "ArrowUp") {
-      goToPreviousWord()
+      //goToPreviousWord()
     }
     if (e.key == "r") {
-      playMedia();
+      //playMedia();
     }
   }
 
@@ -598,6 +615,7 @@ window.addEventListener("keydown", (e) => {
 const goToNextWord = () => {
   if (currRow.value != null) {
     var currentRowIndex = lessonNodes.value.indexOf(currRow.value);
+    
     if (currentRowIndex == lessonNodes.value.length - 1) {
       return;
     }
@@ -609,7 +627,7 @@ const goToNextWord = () => {
 }
 
 const goToPreviousWord = () => {
-  if (currRow.value != null) {
+  if (currRow.value != null && !props.autoHideUpdatedNote) {
     var currentRowIndex = lessonNodes.value.indexOf(currRow.value);
     if (currentRowIndex == 0) {
       return;
