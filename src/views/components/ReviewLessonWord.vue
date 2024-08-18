@@ -12,6 +12,7 @@
           </el-button>
           <template #dropdown>
             <ElDropdownMenu>
+              <el-dropdown-item @click="selectTopTenWordNote">Select top 10</el-dropdown-item>
               <el-dropdown-item @click="levelUpStatus">Status +1</el-dropdown-item>
               <el-dropdown-item @click="levelDownStatus">Status -1</el-dropdown-item>
               <el-dropdown-item @click="highLightAllWord">Highlight All</el-dropdown-item>
@@ -49,7 +50,7 @@
       -->
       <el-auto-resizer>
         <template #default="{ height, width }">
-          <el-table-v2 :columns="columns" :data="lessonNodes" :width="width" :height="height" :sort-by="sortState"
+          <el-table-v2 :columns="columns" :data="wordNotes" :width="width" :height="height" :sort-by="sortState"
             row-key="Index" @column-sort="onSort" :row-props="getRowProps" :row-class="rowClass" fixed
             ref="singleTableRef">
             <!-- Use the scoped slot to render the custom cell -->
@@ -62,6 +63,14 @@
             <template #cell="{ rowData, column, rowIndex }">
               <template v-if="column.key == 'selection'">
                 <el-checkbox v-model:model-value="rowData.Checked" />
+              </template>
+              <template v-if="column.key == 'Lemma'">
+
+                <ElTooltip class="box-item" :content="rowData.WordDefinition" placement="top-start">
+                  <span>
+                    {{ rowData.Lemma }}
+                  </span>
+                </ElTooltip>
               </template>
               <template v-if="column.key == 'tags'">
                 <el-tag v-for="tag in rowData.Tags">{{ tag }}</el-tag>
@@ -93,21 +102,21 @@
         </template>
       </el-auto-resizer>
     </el-col>
-    <el-col :span="9" v-if="currRow != null" style="height: 100%;">
+    <el-col :span="9" v-if="currSelectedRow != null" style="height: 100%;">
       <div class="word-info-box">
         <div>
           <div class="card-images">
-            <img :src="SERVER_BASE_URL + '/image?fileName=' + currRow.ImageFileName" />
-            <strong>{{ currRow.VideoTitle }}</strong>
+            <img :src="SERVER_BASE_URL + '/image?fileName=' + currSelectedRow.ImageFileName" />
+            <strong>{{ currSelectedRow.VideoTitle }}</strong>
           </div>
           <div class="mt-2">
             <label>Lemma</label>
-            <el-input v-model="currRow.Lemma"></el-input>
+            <el-input v-model="currSelectedRow.Lemma"></el-input>
           </div>
           <div class="mt-2 d-flex justify-content-between">
             <div class="w-100 pe-2">
               <label>IPA</label>
-              <el-input v-model="currRow.IPA"></el-input>
+              <el-input v-model="currSelectedRow.IPA"></el-input>
             </div>
             <div class="w-100">
               <label>Type</label>
@@ -117,47 +126,44 @@
 
           <div class="mt-2">
             <label>Word Definition</label>
-            <el-input autosize type="textarea" v-model="currRow.WordDefinition"></el-input>
+            <el-input autosize type="textarea" v-model="currSelectedRow.WordDefinition"></el-input>
           </div>
 
 
           <div class="mt-2">
-            
-              <div class=" mb-2 d-flex justify-content-between flex-grow-1">
-                <div>
-                  <el-button @click="() => playAudio('context-voice')" type="primary">Replay Audio</el-button>
-                </div>
-                <div>
-                  <el-button @click="() => updateNode(currRow, false, currRow!.Status - 1)"
-                    type="info">Update -</el-button>
-                </div>
-                <div>
-                  <el-button @click="() => updateNode(currRow, false, currRow!.Status)"
-                    type="default">Update</el-button>
-                </div>
-                <div>
-                  <el-button @click="() => updateNode(currRow, false, currRow!.Status + 1)"
-                    type="success">Update +</el-button>
-                </div>
-                <div>
-                  <el-button @click="highLightWord" type="warning">Highlight</el-button>
-                </div>
-                <div>
-                  <el-button @click="() => deleteWord(currRow!.NoteId)" type="danger">Remove</el-button>
-                </div>
+
+            <div class=" mb-2 d-flex justify-content-between flex-grow-1">
+              <div>
+                <el-button @click="() => playAudio('context-voice')" type="primary">Replay Audio</el-button>
               </div>
-            <QuillEditor v-model:content="currRow.Context" toolbar="minimal" content-type="html"
+              <div>
+                <el-button @click="() => updateNode(currSelectedRow, false, currSelectedRow!.Status)"
+                  type="default">Update</el-button>
+              </div>
+              <div>
+                <el-button @click="() => updateNode(currSelectedRow, false, currSelectedRow!.Status + 1)"
+                  type="success">Update +</el-button>
+              </div>
+              <div>
+                <el-button @click="highLightWord" type="warning">Highlight</el-button>
+              </div>
+              <div>
+                <el-button @click="() => deleteWord(currSelectedRow!.NoteId)" type="danger">Remove</el-button>
+              </div>
+            </div>
+            <QuillEditor v-model:content="currSelectedRow.Context" toolbar="minimal" content-type="html"
               style="margin-bottom: 2px">
             </QuillEditor>
           </div>
           <div class="d-flex justify-content-between">
             <div>
-              <el-tag v-for="tag in currRow.Tags">{{ tag }}</el-tag>
+              <el-tag v-for="tag in currSelectedRow.Tags">{{ tag }}</el-tag>
             </div>
           </div>
           <div class="mt-2">
             <label>Context Translation</label>
-            <QuillEditor v-model:content="currRow.ContextTranslation" toolbar="#context-toolbar2" content-type="html">
+            <QuillEditor v-model:content="currSelectedRow.ContextTranslation" toolbar="#context-toolbar2"
+              content-type="html">
               <template #toolbar>
                 <div id="context-toolbar2" class="my-toolbar"></div>
               </template>
@@ -195,7 +201,8 @@ import {
   ElDropdown,
   ElDropdownMenu,
   ElDropdownItem,
-  ElIcon
+  ElIcon,
+  ElTooltip
 } from "element-plus";
 import { Loading } from '@element-plus/icons-vue'
 import { SERVER_BASE_URL } from "../../libs/url";
@@ -214,12 +221,13 @@ const props = defineProps<{
   autoHideUpdatedNote: boolean;
 }>();
 let rootData: LessonWordModel[];
-const lessonNodes = ref<LessonWordModel[]>([]);
+const wordNotes = ref<LessonWordModel[]>([]);
 
 const typeText = ref<string | null>("")
 const searchText = ref<string>("");
 
-const currRow = ref<LessonWordModel | null>(null);
+const currSelectedRow = ref<LessonWordModel | null>(null);
+
 var prevRow: LessonWordModel | null;
 const sortState = ref<SortBy>({
   key: 'Lemma',
@@ -236,7 +244,7 @@ const knownWordAmount = ref<number>(0)
 const loading = ref<boolean>(false)
 let updatedNodeIds: number[] = []
 const isHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
-
+let audio: HTMLAudioElement
 
 watch(isHideUpdatedNoteProp, (newvalue, oldVaue) => {
   filterWords()
@@ -356,15 +364,15 @@ const getUpdatedNoteIds = () => {
 
 const filterWords = () => {
   if (!searchText.value) {
-    lessonNodes.value = rootData
+    wordNotes.value = rootData
   } else if (searchText.value.includes("st:")) {
     var status = parseInt(searchText.value.substring(3))
-    lessonNodes.value = rootData.filter((w) => w.Status == status)
+    wordNotes.value = rootData.filter((w) => w.Status == status)
   } else {
-    lessonNodes.value = rootData.filter((w) => w.Lemma.includes(searchText.value) || w.WordDefinition.includes(searchText.value))
+    wordNotes.value = rootData.filter((w) => w.Lemma.includes(searchText.value) || w.WordDefinition.includes(searchText.value))
   }
   if (props.autoHideUpdatedNote) {
-    lessonNodes.value = lessonNodes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
+    wordNotes.value = wordNotes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
   }
   scanAllWordStatus()
   sortWordByLemmaAsc()
@@ -378,29 +386,29 @@ const getRowProps = (row: any) => {
 
 const handleRowClick = (event: any, row: any) => {
   var target = event.target as HTMLElement
-  if (target.className.includes("el-radio")) {
+  if (target.className.includes("el-radio") || target.className.includes("el-checkbox")) {
     return
   }
   var rowClicked = row.rowData as LessonWordModel
-  if (currRow.value == null) {
-    currRow.value = rowClicked
-  } else if (currRow.value != rowClicked) {
-    prevRow = currRow.value
-    currRow.value = rowClicked
+  if (currSelectedRow.value == null) {
+    currSelectedRow.value = rowClicked
+  } else if (currSelectedRow.value != rowClicked) {
+    prevRow = currSelectedRow.value
+    currSelectedRow.value = rowClicked
     //updateLRWord(prevRow);
   }
   playMedia()
 }
 
 const rowClass = ({ rowData }: Parameters<RowClassNameGetter<any>>[0]) => {
-  if (rowData.NoteId === currRow.value?.NoteId) {
+  if (rowData.NoteId === currSelectedRow.value?.NoteId) {
     return 'highlight-row'
   } else {
     return ''
   }
 }
 
-const updateNode = (word: LessonWordModel | null, fromSelection: boolean, newStatus: number) => {
+const updateNode = (word: LessonWordModel | null, formUpdateRange: boolean, newStatus: number) => {
   if (word == null) {
     return
   }
@@ -426,26 +434,32 @@ const updateNode = (word: LessonWordModel | null, fromSelection: boolean, newSta
         analyzeWordStatus(newStatus, word.Status)
         word.Status = newStatus
       }
-      if (props.autoHideUpdatedNote && !fromSelection) {
-        //--> auto move current row to next row or next checked row
-        var wordIndex = lessonNodes.value.indexOf(word)
-        // priority for checked row
-        var nextRowIndex = lessonNodes.value.findIndex((w, idx) => w.Checked)
-        if (nextRowIndex == -1) {
-          nextRowIndex = lessonNodes.value.findIndex((w, idx) => idx == wordIndex + 1)
+      if (props.autoHideUpdatedNote) {
+        word.Checked = false;
+        if (!formUpdateRange) {
+          //--> auto move current row to next row or next checked row
+          var wordIndex = wordNotes.value.indexOf(word)
+
+          // priority for checked row
+          var nextRowIndex = wordNotes.value.findIndex((w, idx) => w.Checked)
+          if (nextRowIndex == -1) {
+            nextRowIndex = wordNotes.value.findIndex((w, idx) => idx == wordIndex + 1)
+          }
+          if (nextRowIndex != -1) {
+            prevRow = currSelectedRow.value
+            currSelectedRow.value = wordNotes.value[nextRowIndex]
+            playMedia()
+          }
         }
-        if (nextRowIndex != -1) {
-          prevRow = currRow.value
-          currRow.value = lessonNodes.value[nextRowIndex]
-          playMedia()
-        }
-      } else if (props.autoHideUpdatedNote && fromSelection) {
-        word.Checked = false
+
       }
+      // else if (props.autoHideUpdatedNote && fromSelection) {
+      //   word.Checked = false
+      // }
       setTimeout(() => {
         recordUpdatedStatusWord(word)
       }, 1000);
-      
+
     })
     .catch((res) => {
       handleUpdateWordError(res.response.data, word.NoteId)
@@ -465,7 +479,7 @@ const handleUpdateWordError = (message: string, noteId: number) => {
 }
 
 const highLightAllWord = () => {
-  lessonNodes.value.forEach((item) => {
+  wordNotes.value.forEach((item) => {
     if (!item.Context.includes("</span>")) {
       item.Context = item.Context.replace(
         item.Word,
@@ -478,7 +492,7 @@ const highLightAllWord = () => {
 };
 
 const saveHighlightWords = () => {
-  let wordContextList = lessonNodes.value.map(({ NoteId: NoteId, Context }) => ({
+  let wordContextList = wordNotes.value.map(({ NoteId: NoteId, Context }) => ({
     NoteId,
     Context,
   }));
@@ -511,7 +525,7 @@ const deleteWord = (noteId: number) => {
     .then(() => {
       ajax
         .get<AnkiResponseModel>(
-          `delete-note?noteId=${noteId}&audioFileName=${currRow.value?.AudioFileName}&prevImageFileName=${currRow.value?.ImageFileName}`
+          `delete-note?noteId=${noteId}&audioFileName=${currSelectedRow.value?.AudioFileName}&prevImageFileName=${currSelectedRow.value?.ImageFileName}`
         )
         .then((res) => {
           if (res.data.error == null) {
@@ -519,8 +533,8 @@ const deleteWord = (noteId: number) => {
               type: "success",
               message: "Delete completed",
             });
-            lessonNodes.value = lessonNodes.value.filter(
-              (wordItem) => wordItem.NoteId != currRow.value?.NoteId
+            wordNotes.value = wordNotes.value.filter(
+              (wordItem) => wordItem.NoteId != currSelectedRow.value?.NoteId
             );
           }
         })
@@ -534,9 +548,9 @@ const deleteWord = (noteId: number) => {
 const playMedia = () => {
   if (props.autoPlayAudio && props.voiceType == "Context") {
     playAudio("word-voice");
-    setTimeout(()=>{
+    setTimeout(() => {
       playAudio("context-voice");
-    },1500)
+    }, 1500)
   }
   if (props.autoPlayAudio && props.voiceType == "Word") {
     playAudio("word-voice");
@@ -544,44 +558,31 @@ const playMedia = () => {
 };
 
 const playAudio = (type: string) => {
-    var fileName = type === 'context-voice' ? currRow.value?.AudioFileName : currRow.value?.Lemma + ".mp3"
-    ajax.get(`/${type}?fileName=${fileName}`,{
-      responseType: 'arraybuffer'
-    }).then((res) => {
-      const arrayBuffer = res.data;
-      // Convert the ArrayBuffer to a Blob
-      const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
-      // Create an object URL from the Blob
-      const url = URL.createObjectURL(blob);
-      // Create an audio element and play the MP3
-      const audio = new Audio(url);
-      audio.play();
-    }).catch(() => {
+  var fileName = type === 'context-voice' ? currSelectedRow.value?.AudioFileName : currSelectedRow.value?.Lemma + ".mp3"
+  ajax.get(`/${type}?fileName=${fileName}`, {
+    responseType: 'arraybuffer'
+  }).then((res) => {
+    const arrayBuffer = res.data;
+    // Convert the ArrayBuffer to a Blob
+    const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+    // Create an object URL from the Blob
+    const url = URL.createObjectURL(blob);
+    // Create an audio element and play the MP3
+    if (audio != null) {
+      audio.pause()
+    }
+    audio = new Audio(url);
+    audio.play();
+  }).catch(() => {
 
-    })
- 
-
-  // var prevAudioElement = document.getElementById(
-  //   type + prevRow?.NoteId
-  // ) as HTMLAudioElement;
-  // var currAudioElement = document.getElementById(
-  //   type + currRow.value?.NoteId
-  // ) as HTMLAudioElement;
-
-  // if (prevAudioElement != null && prevAudioElement.readyState >= 3) {
-  //   prevAudioElement.pause();
-  // }
-  // if (currAudioElement != null && currAudioElement.readyState >= 3) {
-
-  //   currAudioElement.play();
-  // }
+  })
 };
 
 const highLightWord = () => {
   var selectText = window.getSelection()?.toString();
-  if (currRow.value != null && selectText != null) {
+  if (currSelectedRow.value != null && selectText != null) {
     var highlightText = `<span style="background-color: rgb(255, 170, 0);">${selectText}</span>`;
-    currRow.value.Context = currRow.value.Context.replace(
+    currSelectedRow.value.Context = currSelectedRow.value.Context.replace(
       selectText,
       highlightText
     );
@@ -592,9 +593,9 @@ window.addEventListener("keydown", (e) => {
   var targetElement = e.target as Element;
   if (
     !(targetElement instanceof HTMLInputElement) &&
-    targetElement.className != "ql-editor" &&
-    targetElement.className != "el-input__inner" &&
-    targetElement.className != "el-textarea__inner"
+    !targetElement.className.includes("ql-editor") &&
+    !targetElement.className.includes("el-input__inner") &&
+    !targetElement.className.includes("el-textarea__inner")
   ) {
     if (e.key == "ArrowDown") {
       //goToNextWord()
@@ -602,8 +603,14 @@ window.addEventListener("keydown", (e) => {
     if (e.key == "ArrowUp") {
       //goToPreviousWord()
     }
+    if (e.key == "ArrowRight" && currSelectedRow.value != null && currSelectedRow.value.Status < 5) {
+      updateNode(currSelectedRow.value, false, currSelectedRow.value.Status + 1)
+    }
+    if (e.key == "ArrowLeft" && currSelectedRow.value != null && currSelectedRow.value.Status > 1) {
+      updateNode(currSelectedRow.value, false, currSelectedRow.value.Status - 1)
+    }
     if (e.key == "r") {
-      //playMedia();
+      playMedia();
     }
   }
 
@@ -613,10 +620,10 @@ window.addEventListener("keydown", (e) => {
 });
 
 const goToNextWord = () => {
-  if (currRow.value != null) {
-    var currentRowIndex = lessonNodes.value.indexOf(currRow.value);
-    
-    if (currentRowIndex == lessonNodes.value.length - 1) {
+  if (currSelectedRow.value != null) {
+    var currentRowIndex = wordNotes.value.indexOf(currSelectedRow.value);
+
+    if (currentRowIndex == wordNotes.value.length - 1) {
       return;
     }
     // singleTableRef.value?.setCurrentRow(
@@ -627,8 +634,8 @@ const goToNextWord = () => {
 }
 
 const goToPreviousWord = () => {
-  if (currRow.value != null && !props.autoHideUpdatedNote) {
-    var currentRowIndex = lessonNodes.value.indexOf(currRow.value);
+  if (currSelectedRow.value != null && !props.autoHideUpdatedNote) {
+    var currentRowIndex = wordNotes.value.indexOf(currSelectedRow.value);
     if (currentRowIndex == 0) {
       return;
     }
@@ -648,15 +655,15 @@ const onSort = (sortBy: SortBy) => {
 }
 
 const sortWordByLemmaAsc = () => {
-  lessonNodes.value.sort((a, b) => a.Lemma.localeCompare(b.Lemma))
+  wordNotes.value.sort((a, b) => a.Lemma.localeCompare(b.Lemma))
 }
 
 const sortWordByLemmaDesc = () => {
-  lessonNodes.value.sort((a, b) => b.Lemma.localeCompare(a.Lemma))
+  wordNotes.value.sort((a, b) => b.Lemma.localeCompare(a.Lemma))
 }
 
 const onAllRowSelectionChange = (value: CheckboxValueType) => {
-  lessonNodes.value = lessonNodes.value.map(word => {
+  wordNotes.value = wordNotes.value.map(word => {
     word.Checked = value as boolean
     return word
   })
@@ -669,7 +676,7 @@ const scanAllWordStatus = () => {
   learnedWordAmount.value = 0
   knownWordAmount.value = 0
   updatedWord.value = updatedNodeIds.length
-  lessonNodes.value.forEach((word) => {
+  wordNotes.value.forEach((word) => {
     analyzeWordStatus(word.Status)
   })
 }
@@ -706,7 +713,7 @@ const analyzeWordStatus = (currentStatus: number, previousStatus: number = 0) =>
 }
 
 const levelUpStatus = () => {
-  lessonNodes.value.forEach((w) => {
+  wordNotes.value.forEach((w) => {
     if (w.Checked && w.Status < 5) {
       var newStatus = w.Status + 1;
       updateNode(w, true, newStatus)
@@ -715,7 +722,7 @@ const levelUpStatus = () => {
 }
 
 const levelDownStatus = () => {
-  lessonNodes.value.forEach((w) => {
+  wordNotes.value.forEach((w) => {
     if (w.Checked && w.Status > 1) {
       var newStatus = w.Status - 1
       updateNode(w, true, newStatus)
@@ -730,13 +737,13 @@ const recordUpdatedStatusWord = (word: LessonWordModel) => {
     updatedNodeIds.push(word.NoteId)
     updatedWord.value++
     if (props.autoHideUpdatedNote) {
-      lessonNodes.value = lessonNodes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
+      wordNotes.value = wordNotes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
     }
   }
 }
 
 const fillIPAForWord = () => {
-  var listSelectedWord = lessonNodes.value.filter(w => w.Checked && !w.IPA).map(w => ({ NoteId: w.NoteId, Word: w.Lemma }))
+  var listSelectedWord = wordNotes.value.filter(w => w.Checked && !w.IPA).map(w => ({ NoteId: w.NoteId, Word: w.Lemma }))
   var requestData = {
     RangeWord: listSelectedWord
   }
@@ -744,7 +751,7 @@ const fillIPAForWord = () => {
   crawAjax.post("/get-words-phonetic", jsonRequestData).then((res) => {
     if (res.data instanceof Array) {
       res.data.forEach(p => {
-        const node = lessonNodes.value.find(n => n.NoteId == p.noteId)
+        const node = wordNotes.value.find(n => n.NoteId == p.noteId)
         if (node) {
           node.IPA = p.phonetic
         }
@@ -762,6 +769,13 @@ const fillIPAForWord = () => {
   })
 }
 
+const selectTopTenWordNote = () => {
+  wordNotes.value.forEach((w, i) => {
+    if (i < 10) {
+      w.Checked = true
+    }
+  })
+}
 </script>
 
 <style>
@@ -790,5 +804,24 @@ const fillIPAForWord = () => {
   grid-template-rows: repeat(1, 1fr);
   /* 2 rows */
   gap: 10px;
+}
+
+.tooltip-base-box {
+  width: 600px;
+}
+
+.tooltip-base-box .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tooltip-base-box .center {
+  justify-content: center;
+}
+
+.tooltip-base-box .box-item {
+  width: 110px;
+  margin-top: 10px;
 }
 </style>
