@@ -1,7 +1,7 @@
 <template>
   <el-row style="height: 5%;">
     <el-col :span="4">
-      <el-input v-model="searchText" placeholder="st: " @keyup.enter="filterWords"></el-input>
+      <el-input v-model="functionTextBox" placeholder="st: | bl: " @keyup.enter="filterWords"></el-input>
     </el-col>
     <el-col :span="4">
       <div class="action-control-ctn">
@@ -15,6 +15,7 @@
               <el-dropdown-item @click="selectTopTenWordNote">Select top 10</el-dropdown-item>
               <el-dropdown-item @click="levelUpStatus">Status +1</el-dropdown-item>
               <el-dropdown-item @click="levelDownStatus">Status -1</el-dropdown-item>
+              <el-dropdown-item @click="updateRangeWord">Update</el-dropdown-item>
               <el-dropdown-item @click="highLightAllWord">Highlight All</el-dropdown-item>
               <el-dropdown-item @click="fillIPAForWord">Fill IPA</el-dropdown-item>
             </ElDropdownMenu>
@@ -65,7 +66,6 @@
                 <el-checkbox v-model:model-value="rowData.Checked" />
               </template>
               <template v-if="column.key == 'Lemma'">
-
                 <ElTooltip class="box-item" :content="rowData.WordDefinition" placement="top-start">
                   <span>
                     {{ rowData.Lemma }}
@@ -77,7 +77,7 @@
               </template>
               <template v-if="column.key === 'status'">
                 <el-radio-group :model-value="rowData.Status" class="ml-4"
-                  @change="(value) => updateNode(rowData, false, value as number)" :key="rowData.NoteId">
+                  @change="(value) => updateWordNotes(rowData, false, value as number)" :key="rowData.NoteId">
                   <el-radio-button :value="1" size="large">New</el-radio-button>
                   <el-radio-button :value="2" size="large">Rec</el-radio-button>
                   <el-radio-button :value="3" size="large">Fam</el-radio-button>
@@ -137,11 +137,11 @@
                 <el-button @click="() => playAudio('context-voice')" type="primary">Replay Audio</el-button>
               </div>
               <div>
-                <el-button @click="() => updateNode(currSelectedRow, false, currSelectedRow!.Status)"
+                <el-button @click="() => updateWordNotes(currSelectedRow, false, currSelectedRow!.Status)"
                   type="default">Update</el-button>
               </div>
               <div>
-                <el-button @click="() => updateNode(currSelectedRow, false, currSelectedRow!.Status + 1)"
+                <el-button @click="() => updateWordNotes(currSelectedRow, false, currSelectedRow!.Status + 1)"
                   type="success">Update +</el-button>
               </div>
               <div>
@@ -206,7 +206,7 @@ import {
 } from "element-plus";
 import { Loading } from '@element-plus/icons-vue'
 import { SERVER_BASE_URL } from "../../libs/url";
-import LessonWordModel from "../../models/lesson/LessonWordModel";
+import WordNoteModel from "../../models/lesson/LessonWordModel";
 import { onMounted, ref, toRef, watch } from "vue";
 import { ajax, crawAjax } from "@/libs/ajax";
 import AnkiResponseModel from "@/models/response/AnkiResponseModel";
@@ -220,15 +220,15 @@ const props = defineProps<{
   voiceType: string;
   autoHideUpdatedNote: boolean;
 }>();
-let rootData: LessonWordModel[];
-const wordNotes = ref<LessonWordModel[]>([]);
+let rootData: WordNoteModel[];
+const wordNotes = ref<WordNoteModel[]>([]);
 
 const typeText = ref<string | null>("")
-const searchText = ref<string>("");
+const functionTextBox = ref<string>("");
 
-const currSelectedRow = ref<LessonWordModel | null>(null);
+const currSelectedRow = ref<WordNoteModel | null>(null);
 
-var prevRow: LessonWordModel | null;
+var prevRow: WordNoteModel | null;
 const sortState = ref<SortBy>({
   key: 'Lemma',
   order: TableV2SortOrder.ASC,
@@ -247,6 +247,7 @@ const isHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
 let audio: HTMLAudioElement
 
 watch(isHideUpdatedNoteProp, (newvalue, oldVaue) => {
+  functionTextBox.value = ""
   filterWords()
 })
 
@@ -313,7 +314,7 @@ const getLessonWord = () => {
         rootData = [];
         totalWord.value = 0;
         res.data?.result.forEach((item: any) => {
-          var word: LessonWordModel = {
+          var word: WordNoteModel = {
             CardId: item.cards[0],
             AudioFileName: item["fields"]["Audio clip media filename"]
               .value as string,
@@ -338,7 +339,7 @@ const getLessonWord = () => {
           totalWord.value++
           rootData.push(word)
         });
-
+        functionTextBox.value = ""
         filterWords()
       }
       loading.value = false
@@ -363,13 +364,17 @@ const getUpdatedNoteIds = () => {
 
 
 const filterWords = () => {
-  if (!searchText.value) {
+  if (!functionTextBox.value) {
     wordNotes.value = rootData
-  } else if (searchText.value.includes("st:")) {
-    var status = parseInt(searchText.value.substring(3))
+  } else if (functionTextBox.value.includes("st:")) {
+    var status = parseInt(functionTextBox.value.substring(3))
     wordNotes.value = rootData.filter((w) => w.Status == status)
-  } else {
-    wordNotes.value = rootData.filter((w) => w.Lemma.includes(searchText.value) || w.WordDefinition.includes(searchText.value))
+  } else if(functionTextBox.value.includes("bl:")){
+    var newStatus = parseInt(functionTextBox.value.substring(3))
+    setStatusForWords(newStatus)
+  } 
+  else {
+    wordNotes.value = rootData.filter((w) => w.Lemma.includes(functionTextBox.value) || w.WordDefinition.includes(functionTextBox.value))
   }
   if (props.autoHideUpdatedNote) {
     wordNotes.value = wordNotes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
@@ -389,7 +394,7 @@ const handleRowClick = (event: any, row: any) => {
   if (target.className.includes("el-radio") || target.className.includes("el-checkbox")) {
     return
   }
-  var rowClicked = row.rowData as LessonWordModel
+  var rowClicked = row.rowData as WordNoteModel
   if (currSelectedRow.value == null) {
     currSelectedRow.value = rowClicked
   } else if (currSelectedRow.value != rowClicked) {
@@ -408,37 +413,44 @@ const rowClass = ({ rowData }: Parameters<RowClassNameGetter<any>>[0]) => {
   }
 }
 
-const updateNode = (word: LessonWordModel | null, formUpdateRange: boolean, newStatus: number) => {
-  if (word == null) {
+const updateWordNotes = (wordNote: WordNoteModel | null, formUpdateRange: boolean, newStatus: number) => {
+  if (wordNote == null) {
     return
   }
   ajax.post<AnkiResponseModel>(
     "/lr-word",
     JSON.stringify({
-      NoteId: word.NoteId,
-      Lemma: word.Lemma,
-      Word: word.Word,
-      IPA: word.IPA,
-      "Word definition": word.WordDefinition,
-      Context: word.Context,
-      "Context translation": word.ContextTranslation,
+      NoteId: wordNote.NoteId,
+      Lemma: wordNote.Lemma,
+      Word: wordNote.Word,
+      IPA: wordNote.IPA,
+      "Word definition": wordNote.WordDefinition,
+      Context: wordNote.Context,
+      "Context translation": wordNote.ContextTranslation,
       Status: newStatus.toString()
     })
   )
     .then((res) => {
-      if (res.status !== 200 && res.data.error) {
-        handleUpdateWordError(res.data.error, word.NoteId)
+      if (res.data.error) {
+        ElMessage({
+          type: "error",
+          message: res.data.error,
+        });
         return
       }
-      if (newStatus != word.Status) {
-        analyzeWordStatus(newStatus, word.Status)
-        word.Status = newStatus
+      ElMessage({
+        type: "success",
+        message: `update word: ${wordNote.Lemma} success`,
+      });
+      if (newStatus != wordNote.Status) {
+        analyzeWordStatus(newStatus, wordNote.Status)
+        wordNote.Status = newStatus
       }
       if (props.autoHideUpdatedNote) {
-        word.Checked = false;
+        wordNote.Checked = false;
         if (!formUpdateRange) {
           //--> auto move current row to next row or next checked row
-          var wordIndex = wordNotes.value.indexOf(word)
+          var wordIndex = wordNotes.value.indexOf(wordNote)
 
           // priority for checked row
           var nextRowIndex = wordNotes.value.findIndex((w, idx) => w.Checked)
@@ -453,30 +465,53 @@ const updateNode = (word: LessonWordModel | null, formUpdateRange: boolean, newS
         }
 
       }
-      // else if (props.autoHideUpdatedNote && fromSelection) {
-      //   word.Checked = false
-      // }
       setTimeout(() => {
-        recordUpdatedStatusWord(word)
+        recordUpdatedStatusWord(wordNote)
       }, 1000);
 
     })
     .catch((res) => {
-      handleUpdateWordError(res.response.data, word.NoteId)
+      ElMessage({
+          type: "error",
+          message: res.data.error,
+        });
+    });
+};
+
+const updateWordNoteStatus = (wordNote:  WordNoteModel , newStatus: number) => {
+  ajax.put<AnkiResponseModel>(
+    "/note-status",
+    JSON.stringify({
+      NoteId: wordNote.NoteId,
+      Status: newStatus.toString()
+    })
+  ).then((res) => {
+      if (res.data.error) {
+        ElMessage({
+          type: "error",
+          message: res.data.error,
+        });
+        return
+      }
+      ElMessage({
+        type: "success",
+        message: `update status word successfully: ${wordNote.Lemma} `,
+      });
+      if (newStatus != wordNote.Status) {
+        analyzeWordStatus(newStatus, wordNote.Status)
+        wordNote.Status = newStatus
+      }
+    })
+    .catch((res) => {
+      ElMessage({
+          type: "error",
+          message: res.message,
+        });
     });
 };
 
 
-const handleUpdateWordError = (message: string, noteId: number) => {
-  ElMessage({
-    type: "error",
-    message: message,
-  });
-  var index = updatedNodeIds.indexOf(noteId)
-  if (index) {
-    updatedNodeIds.splice(index, 1)
-  }
-}
+
 
 const highLightAllWord = () => {
   wordNotes.value.forEach((item) => {
@@ -604,10 +639,10 @@ window.addEventListener("keydown", (e) => {
       //goToPreviousWord()
     }
     if (e.key == "ArrowRight" && currSelectedRow.value != null && currSelectedRow.value.Status < 5) {
-      updateNode(currSelectedRow.value, false, currSelectedRow.value.Status + 1)
+      updateWordNotes(currSelectedRow.value, false, currSelectedRow.value.Status + 1)
     }
     if (e.key == "ArrowLeft" && currSelectedRow.value != null && currSelectedRow.value.Status > 1) {
-      updateNode(currSelectedRow.value, false, currSelectedRow.value.Status - 1)
+      updateWordNotes(currSelectedRow.value, false, currSelectedRow.value.Status - 1)
     }
     if (e.key == "r") {
       playMedia();
@@ -716,7 +751,7 @@ const levelUpStatus = () => {
   wordNotes.value.forEach((w) => {
     if (w.Checked && w.Status < 5) {
       var newStatus = w.Status + 1;
-      updateNode(w, true, newStatus)
+      updateWordNotes(w, true, newStatus)
     }
   })
 }
@@ -725,12 +760,29 @@ const levelDownStatus = () => {
   wordNotes.value.forEach((w) => {
     if (w.Checked && w.Status > 1) {
       var newStatus = w.Status - 1
-      updateNode(w, true, newStatus)
+      updateWordNotes(w, true, newStatus)
     }
   })
 }
 
-const recordUpdatedStatusWord = (word: LessonWordModel) => {
+const updateRangeWord = () => {
+  wordNotes.value.forEach((w) => {
+    if (w.Checked) {
+      updateWordNotes(w, true, w.Status)
+    }
+  })
+}
+
+const setStatusForWords = (newStatus: number) => {
+  wordNotes.value.forEach((w) => {
+    if (w.Checked && w.Status != newStatus) {
+      updateWordNoteStatus(w, newStatus)
+    }
+  })
+}
+
+
+const recordUpdatedStatusWord = (word: WordNoteModel) => {
   if (updatedNodeIds.includes(word.NoteId)) {
     return
   } else {

@@ -1,4 +1,4 @@
-export default interface LessonWordModel {
+export default interface WordNoteModel {
     CardId: number,
     NoteId: number,
     AudioFileName: string,
