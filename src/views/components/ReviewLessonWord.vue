@@ -66,7 +66,7 @@
                 <el-checkbox v-model:model-value="rowData.Checked" />
               </template>
               <template v-if="column.key == 'Lemma'">
-                <ElTooltip class="box-item" :content="rowData.WordDefinition" placement="top-start">
+                <ElTooltip class="box-item" :content="rowData.WordDefinition" placement="top-start" :hide-after="0">
                   <span>
                     {{ rowData.Lemma }}
                   </span>
@@ -298,6 +298,7 @@ onMounted(() => {
 
 const getLessonWord = () => {
   loading.value = true
+  functionTextBox.value = ""
   ajax
     .get<AnkiResponseModel>(
       `/lesson-words?vid=${props.videoId}`
@@ -314,7 +315,9 @@ const getLessonWord = () => {
         rootData = [];
         totalWord.value = 0;
         res.data?.result.forEach((item: any) => {
-          var word: WordNoteModel = {
+          var word = item["fields"]["Word"].value;
+          var wordReplacementRegex = new RegExp(`${word},`,"gi")
+          var wordNote: WordNoteModel = {
             CardId: item.cards[0],
             AudioFileName: item["fields"]["Audio clip media filename"]
               .value as string,
@@ -328,8 +331,8 @@ const getLessonWord = () => {
             IPA: item["fields"]["IPA"].value,
             Lemma: item["fields"]["Lemma"].value,
             ImageFileName: item["fields"]["Next Image media filename"].value,
-            Word: item["fields"]["Word"].value,
-            WordDefinition: item["fields"]["Word definition"].value,
+            Word: word,
+            WordDefinition: (item["fields"]["Word definition"].value as string).replace(wordReplacementRegex,""),
             VideoTitle: item["fields"]["Video title"].value,
             Status: +item["fields"]["Status"].value,
             NoteId: item.noteId,
@@ -337,9 +340,8 @@ const getLessonWord = () => {
             Checked: false
           };
           totalWord.value++
-          rootData.push(word)
+          rootData.push(wordNote)
         });
-        functionTextBox.value = ""
         filterWords()
       }
       loading.value = false
@@ -510,9 +512,6 @@ const updateWordNoteStatus = (wordNote:  WordNoteModel , newStatus: number) => {
     });
 };
 
-
-
-
 const highLightAllWord = () => {
   wordNotes.value.forEach((item) => {
     if (!item.Context.includes("</span>")) {
@@ -633,10 +632,10 @@ window.addEventListener("keydown", (e) => {
     !targetElement.className.includes("el-textarea__inner")
   ) {
     if (e.key == "ArrowDown") {
-      //goToNextWord()
+      goToNextWord()
     }
     if (e.key == "ArrowUp") {
-      //goToPreviousWord()
+      goToPreviousWord()
     }
     if (e.key == "ArrowRight" && currSelectedRow.value != null && currSelectedRow.value.Status < 5) {
       updateWordNotes(currSelectedRow.value, false, currSelectedRow.value.Status + 1)
@@ -661,22 +660,28 @@ const goToNextWord = () => {
     if (currentRowIndex == wordNotes.value.length - 1) {
       return;
     }
-    // singleTableRef.value?.setCurrentRow(
-    //   lessonWords.value[currentRowIndex + 1]
-    // );
-    typeText.value = null
+    var nextRow = wordNotes.value.at(currentRowIndex + 1)
+    if(nextRow){
+      currSelectedRow.value = nextRow
+      playMedia()
+      typeText.value = null
+    }
   }
 }
 
 const goToPreviousWord = () => {
-  if (currSelectedRow.value != null && !props.autoHideUpdatedNote) {
+  if (currSelectedRow.value != null) {
     var currentRowIndex = wordNotes.value.indexOf(currSelectedRow.value);
+
     if (currentRowIndex == 0) {
       return;
     }
-    // singleTableRef.value?.setCurrentRow(
-    //   lessonWords.value[currentRowIndex - 1]
-    // );
+    var nextRow = wordNotes.value.at(currentRowIndex - 1)
+    if(nextRow){
+      currSelectedRow.value = nextRow
+      playMedia()
+      typeText.value = null
+    }
   }
 }
 
