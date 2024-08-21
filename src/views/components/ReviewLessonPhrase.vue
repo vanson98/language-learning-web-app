@@ -136,7 +136,7 @@ onMounted(() => {
 })
 
 const getLessonPhrases = () => {
-    ajax.get<AnkiResponseModel>(`/lesson-phrases?vid=${props.videoId}&searchContext=${searchText.value}`)
+    ajax.get<AnkiResponseModel>(`/phrase-notes?vid=${props.videoId}&searchContext=${searchText.value}`)
         .then(res => {
             if (res.data.error != null) {
                 ElMessage({
