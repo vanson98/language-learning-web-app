@@ -58,10 +58,12 @@
           :video-id="videoId" 
           :auto-play-audio="autoPlayAudio" 
           :auto-hide-updated-note="autoHideUpdatedNote" 
-          :voice-type="voiceType"
-          ref="reviewLessonWordComponent">
+          :voice-type="voiceType">
         </ReviewLessonWord>
-        <ReviewLessonPhrase v-if="selectNoteType == 1" :video-id="videoId" :auto-play-audio="autoPlayAudio">
+        <ReviewLessonPhrase v-if="selectNoteType == 1" 
+          :video-id="videoId" 
+          :auto-play-audio="autoPlayAudio"
+          :auto-hide-updated-note="autoHideUpdatedNote">
         </ReviewLessonPhrase>
       </el-main>
     </el-container>

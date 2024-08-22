@@ -1,8 +1,8 @@
 import NoteInfo from "../note/NoteInfo"
 
-export default interface LRPhraseModel {
+export default interface LRPhraseNoteModel {
     CardId: string,
-    NoteId: string,
+    NoteId: number,
     AudioFileName: string,
     Context: string,
     ContextTranslation: string,
@@ -16,5 +16,6 @@ export default interface LRPhraseModel {
         Meaning: string,
         Example: string
     }[] ,
-    IsLoadParentPhrase: boolean
+    IsLoadParentPhrase: boolean,
+    Checked: boolean
 }

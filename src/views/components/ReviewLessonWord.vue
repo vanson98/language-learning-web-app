@@ -43,9 +43,16 @@
     <el-col :span="15" style="height: 100%;padding-right: 8px;">
       <el-auto-resizer>
         <template #default="{ height, width }">
-          <el-table-v2 :columns="columns" :data="wordNotes" :width="width" :height="height" :sort-by="sortState"
-             @column-sort="onSort" :row-props="getRowProps" :row-class="rowClass" fixed
-            ref="singleTableRef">
+          <el-table-v2 
+              :columns="columns" 
+              :data="wordNotes" 
+              :width="width" 
+              :height="height" 
+              :sort-by="sortState"
+              @column-sort="onSort" 
+              :row-props="getRowProps" 
+              :row-class="rowClass" 
+              fixed>
             <!-- Use the scoped slot to render the custom cell -->
             <template #header-cell="{ column }">
               <template v-if="column.key == 'selection'">
@@ -76,11 +83,7 @@
                   <el-radio-button :value="4" size="large">Ler</el-radio-button>
                   <el-radio-button :value="5" size="large">Knw</el-radio-button>
                 </el-radio-group>
-
               </template>
-              <!-- <template v-else-if="rowData != null">
-                {{ rowData[column.key] }}
-              </template> -->
             </template>
 
             <template #overlay v-if="loading">
@@ -642,6 +645,7 @@ const deleteWord = (noteId: number) => {
 
 // ====================================== TABLE HANDLE =========================================
 
+// filter words
 const filterWords = () => {
   if (!functionTextBox.value) {
     wordNotes.value = rootData

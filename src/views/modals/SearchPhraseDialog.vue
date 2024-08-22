@@ -46,7 +46,7 @@
     </el-dialog>
 </template>
 <script setup lang="ts">
-import ajax from '@/libs/ajax';
+import {ajax} from '@/libs/ajax';
 import AnkiResponseModel from '@/models/response/AnkiResponseModel';
 import { ElDialog, ElButton, ElSelectV2, ElInput, ElMessage } from 'element-plus';
 import { OptionType } from 'element-plus/es/components/select-v2/src/select.types';
@@ -56,8 +56,8 @@ import { QuillEditor } from '@vueup/vue-quill'
 const props = defineProps<{
     visible: boolean,
     searchText: string | null | undefined,
-    currentLRPhraseId: string | null | undefined,
-    currentParentPhraseIds: string[] | null | undefined
+    currentPhraseId: number | null | undefined,
+    currentMasterPhraseIds: string[] | null | undefined
 }>()
 const emit = defineEmits(["close"])
 
@@ -110,9 +110,9 @@ const confirm = () => {
 }
 
 const addMoreParentPhrase = (phraseId: string) => {
-    if (props.currentParentPhraseIds) {
-        var parentPhraseIds = [...props.currentParentPhraseIds, phraseId].join(",")
-        ajax.post<AnkiResponseModel>(`/parent-phrase?noteId=${props.currentLRPhraseId}&phraseIds=${parentPhraseIds}`)
+    if (props.currentMasterPhraseIds) {
+        var parentPhraseIds = [...props.currentMasterPhraseIds, phraseId].join(",")
+        ajax.post<AnkiResponseModel>(`/parent-phrase?noteId=${props.currentPhraseId}&phraseIds=${parentPhraseIds}`)
             .then(res => {
                 if (res.status == 200 && res.data.error == null) {
                     closeDialog(phraseId)
