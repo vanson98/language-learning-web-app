@@ -5,7 +5,7 @@
     </el-col>
     <el-col :span="4">
       <div class="action-control-ctn">
-        <el-button @click="getLessonWord" type="primary">Load Data</el-button>
+        <el-button @click="getLessonWords" type="primary">Load Data</el-button>
         <el-dropdown>
           <el-button type="primary">
             Action
@@ -41,18 +41,10 @@
   </el-row>
   <el-row style="height: 95%; border: 1px solid; border-color: #8080806f;">
     <el-col :span="15" style="height: 100%;padding-right: 8px;">
-      <!-- 
-      <el-table :data="lessonWords" ref="singleTableRef" style="width: 100%; height: 85vh" highlight-current-row
-        :row-key="'NoteId'" @current-change="handleCurrentRowChange">
-        <el-table-column type="index" width="50" />
-        <el-table-column property="Context" label="Context" min-width="200">
-        </el-table-column>
-      </el-table> 
-      -->
       <el-auto-resizer>
         <template #default="{ height, width }">
           <el-table-v2 :columns="columns" :data="wordNotes" :width="width" :height="height" :sort-by="sortState"
-            row-key="Index" @column-sort="onSort" :row-props="getRowProps" :row-class="rowClass" fixed
+             @column-sort="onSort" :row-props="getRowProps" :row-class="rowClass" fixed
             ref="singleTableRef">
             <!-- Use the scoped slot to render the custom cell -->
             <template #header-cell="{ column }">
@@ -77,7 +69,7 @@
               </template>
               <template v-if="column.key === 'status'">
                 <el-radio-group :model-value="rowData.Status" class="ml-4"
-                  @change="(value) => updateWordNotes(rowData, false, value as number)" :key="rowData.NoteId">
+                  @change="(value) => updateWordNote(rowData, false, value as number)" :key="rowData.NoteId">
                   <el-radio-button :value="1" size="large">New</el-radio-button>
                   <el-radio-button :value="2" size="large">Rec</el-radio-button>
                   <el-radio-button :value="3" size="large">Fam</el-radio-button>
@@ -120,7 +112,7 @@
             </div>
             <div class="w-100">
               <label>Type</label>
-              <el-input @keydown.enter="goToNextWord" v-model="typeText"></el-input>
+              <el-input @keydown.enter="goToNextRow" v-model="typeText"></el-input>
             </div>
           </div>
 
@@ -137,11 +129,11 @@
                 <el-button @click="() => playAudio('context-voice')" type="primary">Replay Audio</el-button>
               </div>
               <div>
-                <el-button @click="() => updateWordNotes(currSelectedRow, false, currSelectedRow!.Status)"
+                <el-button @click="() => updateWordNote(currSelectedRow, false, currSelectedRow!.Status)"
                   type="default">Update</el-button>
               </div>
               <div>
-                <el-button @click="() => updateWordNotes(currSelectedRow, false, currSelectedRow!.Status + 1)"
+                <el-button @click="() => updateWordNote(currSelectedRow, false, currSelectedRow!.Status + 1)"
                   type="success">Update +</el-button>
               </div>
               <div>
@@ -206,10 +198,10 @@ import {
 } from "element-plus";
 import { Loading } from '@element-plus/icons-vue'
 import { SERVER_BASE_URL } from "../../libs/url";
-import WordNoteModel from "../../models/lesson/LessonWordModel";
+import WordNoteModel from "../../models/lesson/WordNoteModel";
 import { onMounted, ref, toRef, watch } from "vue";
-import { ajax, crawAjax } from "@/libs/ajax";
-import AnkiResponseModel from "@/models/response/AnkiResponseModel";
+import { ajax, crawAjax } from "../../libs/ajax";
+import AnkiResponseModel from "../../models/response/AnkiResponseModel";
 import moment from "moment";
 import { QuillEditor } from "@vueup/vue-quill";
 import "@vueup/vue-quill/dist/vue-quill.snow.css";
@@ -220,20 +212,19 @@ const props = defineProps<{
   voiceType: string;
   autoHideUpdatedNote: boolean;
 }>();
+
+const autoHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
+
+watch(autoHideUpdatedNoteProp, (newvalue, oldVaue) => {
+  functionTextBox.value = ""
+  filterWords()
+})
+// =================== Data Variables ===============
 let rootData: WordNoteModel[];
+let updatedNodeIds: number[] = []
+
 const wordNotes = ref<WordNoteModel[]>([]);
 
-const typeText = ref<string | null>("")
-const functionTextBox = ref<string>("");
-
-const currSelectedRow = ref<WordNoteModel | null>(null);
-
-var prevRow: WordNoteModel | null;
-const sortState = ref<SortBy>({
-  key: 'Lemma',
-  order: TableV2SortOrder.ASC,
-})
-const allSelected = ref<boolean>(false)
 const totalWord = ref<number>(0)
 const updatedWord = ref<number>(0)
 const newWordAmount = ref<number>(0)
@@ -241,17 +232,9 @@ const recognizedWordAmount = ref<number>(0)
 const familiarWordAmount = ref<number>(0)
 const learnedWordAmount = ref<number>(0)
 const knownWordAmount = ref<number>(0)
-const loading = ref<boolean>(false)
-let updatedNodeIds: number[] = []
-const isHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
-let audio: HTMLAudioElement
-
-watch(isHideUpdatedNoteProp, (newvalue, oldVaue) => {
-  functionTextBox.value = ""
-  filterWords()
-})
 
 
+// =================== Table Variables ====================
 const columns: Column<any>[] = [
   {
     key: "selection",
@@ -290,13 +273,28 @@ const columns: Column<any>[] = [
   }
 ]
 
+const sortState = ref<SortBy>({
+  key: 'Lemma',
+  order: TableV2SortOrder.ASC,
+})
 
+const typeText = ref<string | null>("")
+const functionTextBox = ref<string>("");
+
+const allSelected = ref<boolean>(false)
+const loading = ref<boolean>(false)
+
+
+const currSelectedRow = ref<WordNoteModel | null>(null);
+let currAudio: HTMLAudioElement
+
+// ====================================== DATA HANDLE ==========================================
 onMounted(() => {
-  getLessonWord();
+  getLessonWords();
   getUpdatedNoteIds()
 });
 
-const getLessonWord = () => {
+const getLessonWords = () => {
   loading.value = true
   functionTextBox.value = ""
   ajax
@@ -364,58 +362,7 @@ const getUpdatedNoteIds = () => {
   })
 }
 
-
-const filterWords = () => {
-  if (!functionTextBox.value) {
-    wordNotes.value = rootData
-  } else if (functionTextBox.value.includes("st:")) {
-    var status = parseInt(functionTextBox.value.substring(3))
-    wordNotes.value = rootData.filter((w) => w.Status == status)
-  } else if(functionTextBox.value.includes("bl:")){
-    var newStatus = parseInt(functionTextBox.value.substring(3))
-    setStatusForWords(newStatus)
-  } 
-  else {
-    wordNotes.value = rootData.filter((w) => w.Lemma.includes(functionTextBox.value) || w.WordDefinition.includes(functionTextBox.value))
-  }
-  if (props.autoHideUpdatedNote) {
-    wordNotes.value = wordNotes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
-  }
-  scanAllWordStatus()
-  sortWordByLemmaAsc()
-}
-
-const getRowProps = (row: any) => {
-  return {
-    onClick: (event: any) => handleRowClick(event, row),
-  }
-}
-
-const handleRowClick = (event: any, row: any) => {
-  var target = event.target as HTMLElement
-  if (target.className.includes("el-radio") || target.className.includes("el-checkbox")) {
-    return
-  }
-  var rowClicked = row.rowData as WordNoteModel
-  if (currSelectedRow.value == null) {
-    currSelectedRow.value = rowClicked
-  } else if (currSelectedRow.value != rowClicked) {
-    prevRow = currSelectedRow.value
-    currSelectedRow.value = rowClicked
-    //updateLRWord(prevRow);
-  }
-  playMedia()
-}
-
-const rowClass = ({ rowData }: Parameters<RowClassNameGetter<any>>[0]) => {
-  if (rowData.NoteId === currSelectedRow.value?.NoteId) {
-    return 'highlight-row'
-  } else {
-    return ''
-  }
-}
-
-const updateWordNotes = (wordNote: WordNoteModel | null, formUpdateRange: boolean, newStatus: number) => {
+const updateWordNote = (wordNote: WordNoteModel | null, formUpdateRange: boolean, newStatus: number) => {
   if (wordNote == null) {
     return
   }
@@ -460,7 +407,6 @@ const updateWordNotes = (wordNote: WordNoteModel | null, formUpdateRange: boolea
             nextRowIndex = wordNotes.value.findIndex((w, idx) => idx == wordIndex + 1)
           }
           if (nextRowIndex != -1) {
-            prevRow = currSelectedRow.value
             currSelectedRow.value = wordNotes.value[nextRowIndex]
             playMedia()
           }
@@ -468,7 +414,7 @@ const updateWordNotes = (wordNote: WordNoteModel | null, formUpdateRange: boolea
 
       }
       setTimeout(() => {
-        recordUpdatedStatusWord(wordNote)
+        recordUpdatedWord(wordNote)
       }, 1000);
 
     })
@@ -479,6 +425,71 @@ const updateWordNotes = (wordNote: WordNoteModel | null, formUpdateRange: boolea
         });
     });
 };
+
+const analyzeWordStatus = (currentStatus: number, previousStatus: number = 0) => {
+  // check increase amount
+  if (currentStatus == 1) {
+    newWordAmount.value++
+  } else if (currentStatus == 2) {
+    recognizedWordAmount.value++
+  } else if (currentStatus == 3) {
+    familiarWordAmount.value++
+  } else if (currentStatus == 4) {
+    learnedWordAmount.value++
+  } else if (currentStatus == 5) {
+    knownWordAmount.value++
+  }
+
+  // check descrease amount
+  if (previousStatus == 0) {
+    return
+  } else if (previousStatus == 1) {
+    newWordAmount.value--
+  } else if (previousStatus == 2) {
+    recognizedWordAmount.value--
+  } else if (previousStatus == 3) {
+    familiarWordAmount.value--
+  } else if (previousStatus == 4) {
+    learnedWordAmount.value--
+  } else if (previousStatus == 5) {
+    knownWordAmount.value--
+  }
+
+}
+
+const levelUpStatus = () => {
+  wordNotes.value.forEach((w) => {
+    if (w.Checked && w.Status < 5) {
+      var newStatus = w.Status + 1;
+      updateWordNote(w, true, newStatus)
+    }
+  })
+}
+
+const levelDownStatus = () => {
+  wordNotes.value.forEach((w) => {
+    if (w.Checked && w.Status > 1) {
+      var newStatus = w.Status - 1
+      updateWordNote(w, true, newStatus)
+    }
+  })
+}
+
+const updateRangeWord = () => {
+  wordNotes.value.forEach((w) => {
+    if (w.Checked) {
+      updateWordNote(w, true, w.Status)
+    }
+  })
+}
+
+const setStatusForWords = (newStatus: number) => {
+  wordNotes.value.forEach((w) => {
+    if (w.Checked && w.Status != newStatus) {
+      updateWordNoteStatus(w, newStatus)
+    }
+  })
+}
 
 const updateWordNoteStatus = (wordNote:  WordNoteModel , newStatus: number) => {
   ajax.put<AnkiResponseModel>(
@@ -510,6 +521,56 @@ const updateWordNoteStatus = (wordNote:  WordNoteModel , newStatus: number) => {
           message: res.message,
         });
     });
+};
+
+const recordUpdatedWord = (word: WordNoteModel) => {
+  if (updatedNodeIds.includes(word.NoteId)) {
+    return
+  } else {
+    updatedNodeIds.push(word.NoteId)
+    updatedWord.value++
+    if (props.autoHideUpdatedNote) {
+      wordNotes.value = wordNotes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
+    }
+  }
+}
+
+const fillIPAForWord = () => {
+  var listSelectedWord = wordNotes.value.filter(w => w.Checked && !w.IPA).map(w => ({ NoteId: w.NoteId, Word: w.Lemma }))
+  var requestData = {
+    RangeWord: listSelectedWord
+  }
+  var jsonRequestData = JSON.stringify(requestData)
+  crawAjax.post("/get-words-phonetic", jsonRequestData).then((res) => {
+    if (res.data instanceof Array) {
+      res.data.forEach(p => {
+        const node = wordNotes.value.find(n => n.NoteId == p.noteId)
+        if (node) {
+          node.IPA = p.phonetic
+        }
+      })
+      ElMessage({
+        message: `get phonetic success`,
+        type: "success",
+      });
+    }
+  }).catch(err => {
+    ElMessage({
+      message: `get phonetic error`,
+      type: "error",
+    });
+  })
+}
+
+const highLightWord = () => {
+  var selectText = window.getSelection()?.toString();
+  if (currSelectedRow.value != null && selectText != null) {
+    var highlightText = `<span style="background-color: rgb(255, 170, 0);">${selectText}</span>`;
+    currSelectedRow.value.Context = currSelectedRow.value.Context.replace(
+      selectText,
+      highlightText
+    );
+  }
 };
 
 const highLightAllWord = () => {
@@ -579,6 +640,88 @@ const deleteWord = (noteId: number) => {
     .catch(() => { });
 };
 
+// ====================================== TABLE HANDLE =========================================
+
+const filterWords = () => {
+  if (!functionTextBox.value) {
+    wordNotes.value = rootData
+  } else if (functionTextBox.value.includes("st:")) {
+    var status = parseInt(functionTextBox.value.substring(3))
+    wordNotes.value = rootData.filter((w) => w.Status == status)
+  } else if(functionTextBox.value.includes("bl:")){
+    var newStatus = parseInt(functionTextBox.value.substring(3))
+    setStatusForWords(newStatus)
+  } 
+  else {
+    wordNotes.value = rootData.filter((w) => w.Lemma.includes(functionTextBox.value) || w.WordDefinition.includes(functionTextBox.value))
+  }
+  if (props.autoHideUpdatedNote) {
+    wordNotes.value = wordNotes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
+  }
+  scanAllWordStatus()
+  sortWordByLemmaAsc()
+}
+
+// get row properties
+const getRowProps = (row: any) => {
+  return {
+    onClick: (event: any) => handleRowClick(event, row),
+  }
+}
+
+// handle when row click
+const handleRowClick = (event: any, row: any) => {
+  var target = event.target as HTMLElement
+  if (target.className.includes("el-radio") || target.className.includes("el-checkbox")) {
+    return
+  }
+  var rowClicked = row.rowData as WordNoteModel
+  if (currSelectedRow.value == null) {
+    currSelectedRow.value = rowClicked
+  } else if (currSelectedRow.value != rowClicked) {
+    currSelectedRow.value = rowClicked
+  }
+  playMedia()
+}
+
+const rowClass = ({ rowData }: Parameters<RowClassNameGetter<any>>[0]) => {
+  if (rowData.NoteId === currSelectedRow.value?.NoteId) {
+    return 'highlight-row'
+  } else {
+    return ''
+  }
+}
+
+window.addEventListener("keydown", (e) => {
+  var targetElement = e.target as Element;
+  if (
+    !(targetElement instanceof HTMLInputElement) &&
+    !targetElement.className.includes("ql-editor") &&
+    !targetElement.className.includes("el-input__inner") &&
+    !targetElement.className.includes("el-textarea__inner")
+  ) {
+    if (e.key == "ArrowDown") {
+      goToNextRow()
+    }
+    if (e.key == "ArrowUp") {
+      goToPreviousRow()
+    }
+    if (e.key == "ArrowRight" && currSelectedRow.value != null && currSelectedRow.value.Status < 5) {
+      updateWordNote(currSelectedRow.value, false, currSelectedRow.value.Status + 1)
+    }
+    if (e.key == "ArrowLeft" && currSelectedRow.value != null && currSelectedRow.value.Status > 1) {
+      updateWordNote(currSelectedRow.value, false, currSelectedRow.value.Status - 1)
+    }
+    if (e.key == "r") {
+      playMedia();
+    }
+  }
+
+  if (e.altKey && e.key == "a" && targetElement.className == "ql-editor") {
+    highLightWord();
+  }
+});
+
 const playMedia = () => {
   if (props.autoPlayAudio && props.voiceType == "Context") {
     playAudio("word-voice");
@@ -602,58 +745,17 @@ const playAudio = (type: string) => {
     // Create an object URL from the Blob
     const url = URL.createObjectURL(blob);
     // Create an audio element and play the MP3
-    if (audio != null) {
-      audio.pause()
+    if (currAudio != null) {
+      currAudio.pause()
     }
-    audio = new Audio(url);
-    audio.play();
+    currAudio = new Audio(url);
+    currAudio.play();
   }).catch(() => {
 
   })
 };
 
-const highLightWord = () => {
-  var selectText = window.getSelection()?.toString();
-  if (currSelectedRow.value != null && selectText != null) {
-    var highlightText = `<span style="background-color: rgb(255, 170, 0);">${selectText}</span>`;
-    currSelectedRow.value.Context = currSelectedRow.value.Context.replace(
-      selectText,
-      highlightText
-    );
-  }
-};
-
-window.addEventListener("keydown", (e) => {
-  var targetElement = e.target as Element;
-  if (
-    !(targetElement instanceof HTMLInputElement) &&
-    !targetElement.className.includes("ql-editor") &&
-    !targetElement.className.includes("el-input__inner") &&
-    !targetElement.className.includes("el-textarea__inner")
-  ) {
-    if (e.key == "ArrowDown") {
-      goToNextWord()
-    }
-    if (e.key == "ArrowUp") {
-      goToPreviousWord()
-    }
-    if (e.key == "ArrowRight" && currSelectedRow.value != null && currSelectedRow.value.Status < 5) {
-      updateWordNotes(currSelectedRow.value, false, currSelectedRow.value.Status + 1)
-    }
-    if (e.key == "ArrowLeft" && currSelectedRow.value != null && currSelectedRow.value.Status > 1) {
-      updateWordNotes(currSelectedRow.value, false, currSelectedRow.value.Status - 1)
-    }
-    if (e.key == "r") {
-      playMedia();
-    }
-  }
-
-  if (e.altKey && e.key == "a" && targetElement.className == "ql-editor") {
-    highLightWord();
-  }
-});
-
-const goToNextWord = () => {
+const goToNextRow = () => {
   if (currSelectedRow.value != null) {
     var currentRowIndex = wordNotes.value.indexOf(currSelectedRow.value);
 
@@ -669,7 +771,7 @@ const goToNextWord = () => {
   }
 }
 
-const goToPreviousWord = () => {
+const goToPreviousRow = () => {
   if (currSelectedRow.value != null) {
     var currentRowIndex = wordNotes.value.indexOf(currSelectedRow.value);
 
@@ -721,111 +823,6 @@ const scanAllWordStatus = () => {
   })
 }
 
-const analyzeWordStatus = (currentStatus: number, previousStatus: number = 0) => {
-  // check increase amount
-  if (currentStatus == 1) {
-    newWordAmount.value++
-  } else if (currentStatus == 2) {
-    recognizedWordAmount.value++
-  } else if (currentStatus == 3) {
-    familiarWordAmount.value++
-  } else if (currentStatus == 4) {
-    learnedWordAmount.value++
-  } else if (currentStatus == 5) {
-    knownWordAmount.value++
-  }
-
-  // check descrease amount
-  if (previousStatus == 0) {
-    return
-  } else if (previousStatus == 1) {
-    newWordAmount.value--
-  } else if (previousStatus == 2) {
-    recognizedWordAmount.value--
-  } else if (previousStatus == 3) {
-    familiarWordAmount.value--
-  } else if (previousStatus == 4) {
-    learnedWordAmount.value--
-  } else if (previousStatus == 5) {
-    knownWordAmount.value--
-  }
-
-}
-
-const levelUpStatus = () => {
-  wordNotes.value.forEach((w) => {
-    if (w.Checked && w.Status < 5) {
-      var newStatus = w.Status + 1;
-      updateWordNotes(w, true, newStatus)
-    }
-  })
-}
-
-const levelDownStatus = () => {
-  wordNotes.value.forEach((w) => {
-    if (w.Checked && w.Status > 1) {
-      var newStatus = w.Status - 1
-      updateWordNotes(w, true, newStatus)
-    }
-  })
-}
-
-const updateRangeWord = () => {
-  wordNotes.value.forEach((w) => {
-    if (w.Checked) {
-      updateWordNotes(w, true, w.Status)
-    }
-  })
-}
-
-const setStatusForWords = (newStatus: number) => {
-  wordNotes.value.forEach((w) => {
-    if (w.Checked && w.Status != newStatus) {
-      updateWordNoteStatus(w, newStatus)
-    }
-  })
-}
-
-
-const recordUpdatedStatusWord = (word: WordNoteModel) => {
-  if (updatedNodeIds.includes(word.NoteId)) {
-    return
-  } else {
-    updatedNodeIds.push(word.NoteId)
-    updatedWord.value++
-    if (props.autoHideUpdatedNote) {
-      wordNotes.value = wordNotes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
-    }
-  }
-}
-
-const fillIPAForWord = () => {
-  var listSelectedWord = wordNotes.value.filter(w => w.Checked && !w.IPA).map(w => ({ NoteId: w.NoteId, Word: w.Lemma }))
-  var requestData = {
-    RangeWord: listSelectedWord
-  }
-  var jsonRequestData = JSON.stringify(requestData)
-  crawAjax.post("/get-words-phonetic", jsonRequestData).then((res) => {
-    if (res.data instanceof Array) {
-      res.data.forEach(p => {
-        const node = wordNotes.value.find(n => n.NoteId == p.noteId)
-        if (node) {
-          node.IPA = p.phonetic
-        }
-      })
-      ElMessage({
-        message: `get phonetic success`,
-        type: "success",
-      });
-    }
-  }).catch(err => {
-    ElMessage({
-      message: `get phonetic error`,
-      type: "error",
-    });
-  })
-}
-
 const selectTopTenWordNote = () => {
   wordNotes.value.forEach((w, i) => {
     if (i < 10) {
@@ -833,6 +830,7 @@ const selectTopTenWordNote = () => {
     }
   })
 }
+
 </script>
 
 <style>
