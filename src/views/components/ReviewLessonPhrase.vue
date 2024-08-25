@@ -49,20 +49,6 @@
                     </el-table-v2>
                 </template>
             </el-auto-resizer>
-            
-            <!-- <el-table :data="lessonPhrases" ref="singleTableRef" style="width: 100%;height: 85vh;" highlight-current-row
-                @current-change="handleCurrentRowChange">
-                <el-table-column type="index" width="50" />
-                <el-table-column property="Context" label="Context" min-width="200">
-                    <template #default="scope">
-                        <p v-html="scope.row.Context"></p>
-                        <audio :id="'card-audio-' + scope.row.NoteId">
-                            <source :src="SERVER_BASE_URL + '/audio?fileName=' + scope.row.AudioFileName"
-                                type="audio/mpeg">
-                        </audio>
-                    </template>
-                </el-table-column>
-            </el-table> -->
         </el-col>
         <el-col :span="10" style="height: 100%;" v-if="currSelectedRow">
             <div class="phrase-info-box">
@@ -81,7 +67,7 @@
                             <el-button @click="() => playAudio()" type="primary">Replay Audio</el-button>
                         </div>
                         <div>
-                            <el-button @click="() => updatPhraseNote(currSelectedRow)" type="primary">Save</el-button>
+                            <el-button @click="() => updatPhraseNote(currSelectedRow)" type="primary">Update</el-button>
                             <el-button @click="() => deletePhrase(currSelectedRow!.NoteId)" type="danger">Remove</el-button>
                         </div>
                     </div>
@@ -262,14 +248,28 @@ const getLessonPhrases = () => {
 
 const updatPhraseNote = (lrPhrase: LRPhraseNoteModel | null) => {
     if (lrPhrase !== null) {
-        ajax.post<AnkiResponseModel>("/lr-phrase", JSON.stringify({
+        ajax.put<AnkiResponseModel>("/phrase", JSON.stringify({
             NoteId: lrPhrase.NoteId,
             Context: lrPhrase.Context,
             "Context translation": lrPhrase.ContextTranslation,
             PhraseIds: lrPhrase.PhraseIds.toString().replace("[]", "") as string
         })).then(res => {
+            if(res.data.error != null){
+                ElMessage({
+                    type: "error",
+                    message: res.data.error,
+                });
+                return
+            }
+            ElMessage({
+                type: "success",
+                message: `update phrase successful`,
+            });
         }).catch(res => {
-            console.error(res)
+            ElMessage({
+                    type: "error",
+                    message: res.message,
+            });
         })
     }
 }
@@ -316,15 +316,19 @@ const deletePhrase = (noteId: number) => {
         }
     )
         .then(() => {
-            ajax.get<AnkiResponseModel>(`delete-note?noteId=${noteId}&audioFileName=${currSelectedRow.value?.AudioFileName}&imageFileName=${currSelectedRow.value?.ImageFileName}`).then(res => {
-                if (res.data.error == null) {
+            ajax.delete<AnkiResponseModel>(`note?noteId=${noteId}&audioFileName=${currSelectedRow.value?.AudioFileName}&imageFileName=${currSelectedRow.value?.ImageFileName}`).then(res => {
+                if (res.data.error != null) {
                     ElMessage({
-                        type: 'success',
-                        message: 'Delete completed',
-                    })
-                    phraseNotes.value = phraseNotes.value.filter(wordItem => wordItem.NoteId != currSelectedRow.value?.NoteId)
+                        type: "error",
+                        message: res.data.error,
+                    });
+                    return
                 }
-
+                ElMessage({
+                    type: 'success',
+                    message: 'Delete completed',
+                })
+                phraseNotes.value = phraseNotes.value.filter(wordItem => wordItem.NoteId != currSelectedRow.value?.NoteId)
             }).catch(res => {
                 console.error(res)
             })
@@ -475,6 +479,7 @@ const highLightWord = () => {
 
 
 // ========================== DIALOG HANDLE ==========================
+
 const closeSearchPhraseDialog = (newPhraseId: string | null) => {
     if (newPhraseId != null && currSelectedRow.value != null) {
         if (!currSelectedRow.value.PhraseIds.includes(newPhraseId)) {

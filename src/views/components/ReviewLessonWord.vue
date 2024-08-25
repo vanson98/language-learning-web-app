@@ -43,16 +43,8 @@
     <el-col :span="15" style="height: 100%;padding-right: 8px;">
       <el-auto-resizer>
         <template #default="{ height, width }">
-          <el-table-v2 
-              :columns="columns" 
-              :data="wordNotes" 
-              :width="width" 
-              :height="height" 
-              :sort-by="sortState"
-              @column-sort="onSort" 
-              :row-props="getRowProps" 
-              :row-class="rowClass" 
-              fixed>
+          <el-table-v2 :columns="columns" :data="wordNotes" :width="width" :height="height" :sort-by="sortState"
+            @column-sort="onSort" :row-props="getRowProps" :row-class="rowClass" fixed>
             <!-- Use the scoped slot to render the custom cell -->
             <template #header-cell="{ column }">
               <template v-if="column.key == 'selection'">
@@ -317,7 +309,7 @@ const getLessonWords = () => {
         totalWord.value = 0;
         res.data?.result.forEach((item: any) => {
           var word = item["fields"]["Word"].value;
-          var wordReplacementRegex = new RegExp(`${word},`,"gi")
+          var wordReplacementRegex = new RegExp(`${word},`, "gi")
           var wordNote: WordNoteModel = {
             CardId: item.cards[0],
             AudioFileName: item["fields"]["Audio clip media filename"]
@@ -333,7 +325,7 @@ const getLessonWords = () => {
             Lemma: item["fields"]["Lemma"].value,
             ImageFileName: item["fields"]["Next Image media filename"].value,
             Word: word,
-            WordDefinition: (item["fields"]["Word definition"].value as string).replace(wordReplacementRegex,""),
+            WordDefinition: (item["fields"]["Word definition"].value as string).replace(wordReplacementRegex, ""),
             VideoTitle: item["fields"]["Video title"].value,
             Status: +item["fields"]["Status"].value,
             NoteId: item.noteId,
@@ -423,9 +415,9 @@ const updateWordNote = (wordNote: WordNoteModel | null, formUpdateRange: boolean
     })
     .catch((res) => {
       ElMessage({
-          type: "error",
-          message: res.data.error,
-        });
+        type: "error",
+        message: res.data.error,
+      });
     });
 };
 
@@ -494,7 +486,7 @@ const setStatusForWords = (newStatus: number) => {
   })
 }
 
-const updateWordNoteStatus = (wordNote:  WordNoteModel , newStatus: number) => {
+const updateWordNoteStatus = (wordNote: WordNoteModel, newStatus: number) => {
   ajax.put<AnkiResponseModel>(
     "/note-status",
     JSON.stringify({
@@ -502,27 +494,27 @@ const updateWordNoteStatus = (wordNote:  WordNoteModel , newStatus: number) => {
       Status: newStatus.toString()
     })
   ).then((res) => {
-      if (res.data.error) {
-        ElMessage({
-          type: "error",
-          message: res.data.error,
-        });
-        return
-      }
+    if (res.data.error) {
       ElMessage({
-        type: "success",
-        message: `update status word successfully: ${wordNote.Lemma} `,
+        type: "error",
+        message: res.data.error,
       });
-      if (newStatus != wordNote.Status) {
-        analyzeWordStatus(newStatus, wordNote.Status)
-        wordNote.Status = newStatus
-      }
-    })
+      return
+    }
+    ElMessage({
+      type: "success",
+      message: `update status word successfully: ${wordNote.Lemma} `,
+    });
+    if (newStatus != wordNote.Status) {
+      analyzeWordStatus(newStatus, wordNote.Status)
+      wordNote.Status = newStatus
+    }
+  })
     .catch((res) => {
       ElMessage({
-          type: "error",
-          message: res.message,
-        });
+        type: "error",
+        message: res.message,
+      });
     });
 };
 
@@ -621,23 +613,31 @@ const deleteWord = (noteId: number) => {
     type: "warning",
   })
     .then(() => {
-      ajax
-        .get<AnkiResponseModel>(
-          `delete-note?noteId=${noteId}&audioFileName=${currSelectedRow.value?.AudioFileName}&prevImageFileName=${currSelectedRow.value?.ImageFileName}`
-        )
+      ajax.delete<AnkiResponseModel>(
+        `note?noteId=${noteId}&audioFileName=${currSelectedRow.value?.AudioFileName}&imageFileName=${currSelectedRow.value?.ImageFileName}`
+      )
         .then((res) => {
-          if (res.data.error == null) {
+          if (res.data.error != null) {
             ElMessage({
-              type: "success",
-              message: "Delete completed",
+              type: "error",
+              message: res.data.error,
             });
-            wordNotes.value = wordNotes.value.filter(
-              (wordItem) => wordItem.NoteId != currSelectedRow.value?.NoteId
-            );
+            return
           }
+          ElMessage({
+            type: 'success',
+            message: 'Delete word note completed',
+          })
+          wordNotes.value = wordNotes.value.filter(
+            (wordNote) => wordNote.NoteId != noteId
+          );
+
         })
         .catch((res) => {
-          console.error(res);
+          ElMessage({
+              type: "error",
+              message: res.message,
+          });
         });
     })
     .catch(() => { });
@@ -652,10 +652,10 @@ const filterWords = () => {
   } else if (functionTextBox.value.includes("st:")) {
     var status = parseInt(functionTextBox.value.substring(3))
     wordNotes.value = rootData.filter((w) => w.Status == status)
-  } else if(functionTextBox.value.includes("bl:")){
+  } else if (functionTextBox.value.includes("bl:")) {
     var newStatus = parseInt(functionTextBox.value.substring(3))
     setStatusForWords(newStatus)
-  } 
+  }
   else {
     wordNotes.value = rootData.filter((w) => w.Lemma.includes(functionTextBox.value) || w.WordDefinition.includes(functionTextBox.value))
   }
@@ -767,7 +767,7 @@ const goToNextRow = () => {
       return;
     }
     var nextRow = wordNotes.value.at(currentRowIndex + 1)
-    if(nextRow){
+    if (nextRow) {
       currSelectedRow.value = nextRow
       playMedia()
       typeText.value = null
@@ -783,7 +783,7 @@ const goToPreviousRow = () => {
       return;
     }
     var nextRow = wordNotes.value.at(currentRowIndex - 1)
-    if(nextRow){
+    if (nextRow) {
       currSelectedRow.value = nextRow
       playMedia()
       typeText.value = null

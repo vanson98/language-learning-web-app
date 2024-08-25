@@ -38,7 +38,7 @@ import { ElDialog,ElButton,ElInput, ElMessage } from 'element-plus';
 import { Quill, QuillEditor } from '@vueup/vue-quill'
 import { onMounted, ref, toRef } from 'vue';
 import EditPhraseModel from '@/models/phrase/EditPhraseModel'
-import ajax from '@/libs/ajax';
+import {ajax} from '@/libs/ajax';
 import AnkiResponseModel from '@/models/response/AnkiResponseModel';
 
 const props = defineProps<{
@@ -68,7 +68,7 @@ const updatePhrase = () =>{
         Example: exampleQuillEditor.value.getHTML().replace("<p><br></p>",""),
         Meaning: meaningQuillEditor.value.getHTML().replace("<p><br></p>","")
     }
-    ajax.put<AnkiResponseModel>("/phrase", JSON.stringify(phraseModel)).then(res => {
+    ajax.put<AnkiResponseModel>("/phrase-master", JSON.stringify(phraseModel)).then(res => {
             if (res.data.error != null) {
                 ElMessage({
                     message: res.data.error,
