@@ -1,7 +1,7 @@
 <template>
     <el-row>
         <el-col :span="4">
-            <el-input v-model="functionTextBox" placeholder="Serch Phrase" @keyup.enter="getLessonPhrases"></el-input>
+            <el-input v-model="functionTextBox" placeholder="bl: " @keyup.enter="filterPhrases"></el-input>
         </el-col>
         <el-col :span="4">
             <div class="ms-5">
@@ -124,15 +124,15 @@
 </template>
 
 <script lang="ts" setup>
-import { ElTag, ElRow, ElCol, ElCheckbox, Column, ElButton, ElMessageBox, ElMessage, ElInput, ElTableV2, ElAutoResizer, RowClassNameGetter, CheckboxValueType } from 'element-plus'
+import { ElTag, ElRow, ElCol, ElCheckbox, Column, ElButton, ElMessageBox, ElMessage, ElInput, ElTableV2, ElAutoResizer, RowClassNameGetter, CheckboxValueType, ElIcon } from 'element-plus'
+import { Loading } from '@element-plus/icons-vue'
 import {SERVER_BASE_URL} from '../../libs/url'
-import LRPhraseNoteModel from '../../models/lesson/LRPhraseNoteModel'
+import PhraseNoteModel from '../../models/lesson/LRPhraseNoteModel'
 import { onMounted, ref, toRef, toRefs, watch } from 'vue';
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
 import {ajax} from '../../libs/ajax';
 import AnkiResponseModel from '../../models/response/AnkiResponseModel';
-import moment from 'moment';
 import SearchPhraseDialog from '../modals/SearchPhraseDialog.vue'
 import EditPhraseDialog from '../modals/EditPhraseDialog.vue'
 import EditPhraseModel from '../../models/phrase/EditPhraseModel';
@@ -152,10 +152,10 @@ watch(autoHideUpdatedNoteProp, (newvalue, oldVaue) => {
 
 
 // =================== Data Variables ===============
-let rootData: LRPhraseNoteModel[];
-let updatedNodeIds: number[] = [];
+let rootData: PhraseNoteModel[];
+let updatedNodeIds: number[] = [1700807149035];
 
-const phraseNotes = ref<LRPhraseNoteModel[]>([]);
+const phraseNotes = ref<PhraseNoteModel[]>([]);
 
 const totalPhrase = ref<number>(0)
 const updatedPhrase = ref<number>(0)
@@ -187,7 +187,7 @@ const functionTextBox = ref<string>("")
 const allSelected = ref<boolean>(false)
 const loading = ref<boolean>(false)
 
-const currSelectedRow = ref<LRPhraseNoteModel | null>(null)
+const currSelectedRow = ref<PhraseNoteModel | null>(null)
 let currAudio: HTMLAudioElement
 
 const selectionPhrase = ref<string | undefined>("")
@@ -197,7 +197,7 @@ const selectionPhrase = ref<string | undefined>("")
 const searchPhraseDialogVisible = ref<boolean>(false)
 const editPhraseDialogVisible = ref<boolean>(false)
 const editPhraseModel = ref<EditPhraseModel>({
-    NoteId: "",
+    NoteId: 0,
     Example: "",
     Front: "",
     Meaning: ""
@@ -210,8 +210,11 @@ onMounted(() => {
 
 
 const getLessonPhrases = () => {
+    functionTextBox.value = ""
+    loading.value = true
     ajax.get<AnkiResponseModel>(`/phrase-notes?vid=${props.videoId}&searchContext=${functionTextBox.value}`)
         .then(res => {
+            loading.value = false
             if (res.data.error != null) {
                 ElMessage({
                     message: res.data.error,
@@ -220,9 +223,9 @@ const getLessonPhrases = () => {
                 return
             }
             if (res.data.result != null) {
-                phraseNotes.value = []
+                rootData = []
                 res.data?.result.forEach((item: any) => {
-                    phraseNotes.value.push({
+                    rootData.push({
                         CardId: item.cards[0],
                         NoteId: item.noteId,
                         Tags: item.tags,
@@ -230,23 +233,27 @@ const getLessonPhrases = () => {
                         ContextTranslation: item["fields"]["Context translation"].value as string,
                         ImageFileName: item["fields"]["Next Image media filename"].value,
                         AudioFileName: item["fields"]["Audio clip media filename"].value as string,
-                        DateCreated: moment(item["fields"]["Date created"].value as string, "YYYY-MM-DD hh:mm").toDate(),
-                        PhraseIds: (item["fields"]["PhraseIds"].value as string).split(",").filter(id => id != ""),
+                        PhraseIds: (item["fields"]["PhraseIds"].value as string).split(",").filter(id => id != "").map(id => Number(id)),
                         ParentPhrases: [],
                         IsLoadParentPhrase: false,
                         Checked: false
                     })
                 })
-                currSelectedRow.value = phraseNotes.value[0]
-                getParentPhrase(phraseNotes.value[0])
+                filterPhrases()
+                //currSelectedRow.value = phraseNotes.value[0]
+                //getParentPhrase(phraseNotes.value[0])
             }
         })
         .catch(res => {
-            console.log(res)
+            ElMessage({
+                    message: res.message,
+                    type: 'error',
+                })
+            loading.value = false
         })
 }
 
-const updatPhraseNote = (lrPhrase: LRPhraseNoteModel | null) => {
+const updatPhraseNote = (lrPhrase: PhraseNoteModel | null) => {
     if (lrPhrase !== null) {
         ajax.put<AnkiResponseModel>("/phrase", JSON.stringify({
             NoteId: lrPhrase.NoteId,
@@ -274,7 +281,52 @@ const updatPhraseNote = (lrPhrase: LRPhraseNoteModel | null) => {
     }
 }
 
-const getParentPhrase = (lrPhrase: LRPhraseNoteModel) => {
+const setPhraseMasterStatus = (newStatus: number) => {
+    var masterPhraseIds : number[] = []
+    phraseNotes.value.filter(pn=>pn.Checked).forEach(p=>masterPhraseIds = masterPhraseIds.concat(p.PhraseIds))
+
+    masterPhraseIds = Array.from(new Set(masterPhraseIds));
+    
+    masterPhraseIds.forEach((pid) => {
+        updatePhraseMasterNoteStatus(pid, newStatus)
+    })
+}
+
+const updatePhraseMasterNoteStatus = (masterPhraseId: number, newStatus: number) => {
+  ajax.put<AnkiResponseModel>(
+    "/note-status",
+    JSON.stringify({
+      NoteId: masterPhraseId,
+      Status: newStatus.toString()
+    })
+  ).then((res) => {
+    if (res.data.error) {
+      ElMessage({
+        type: "error",
+        message: res.data.error,
+      });
+      console.log(`base level for master phrase id : ${masterPhraseId} error`)
+      return
+    }
+    ElMessage({
+      type: "success",
+      message: `base level for master phrase id : ${masterPhraseId} successful`,
+    });
+    // if (newStatus != masterPhraseId.Status) {
+    //   analyzeWordStatus(newStatus, masterPhraseId.Status)
+    //   masterPhraseId.Status = newStatus
+    // }
+  })
+    .catch((res) => {
+      console.log(`base level for master phrase id : ${masterPhraseId} error`)
+      ElMessage({
+        type: "error",
+        message: res.message,
+      });
+    });
+};
+
+const getParentPhrase = (lrPhrase: PhraseNoteModel) => {
     if (lrPhrase.PhraseIds.length > 0 && !lrPhrase.IsLoadParentPhrase) {
         lrPhrase.ParentPhrases = []
         ajax.get<AnkiResponseModel>(`/notes?ids=${lrPhrase.PhraseIds.join(",")}`).then(res => {
@@ -297,10 +349,10 @@ const getParentPhrase = (lrPhrase: LRPhraseNoteModel) => {
     }
 }
 
-const removeParentPhrase = (parentPhraseId: string) => {
+const removeParentPhrase = (masterPhraseId: number) => {
     if (currSelectedRow.value != null) {
-        currSelectedRow.value.PhraseIds = currSelectedRow.value.PhraseIds.filter(pid => pid != parentPhraseId)
-        currSelectedRow.value.ParentPhrases = currSelectedRow.value.ParentPhrases.filter(pp => pp.NoteId != parentPhraseId)
+        currSelectedRow.value.PhraseIds = currSelectedRow.value.PhraseIds.filter(pid => pid != masterPhraseId)
+        currSelectedRow.value.ParentPhrases = currSelectedRow.value.ParentPhrases.filter(pp => pp.NoteId != masterPhraseId)
         updatPhraseNote(currSelectedRow.value)
     }
 }
@@ -332,7 +384,12 @@ const deletePhrase = (noteId: number) => {
             }).catch(res => {
                 console.error(res)
             })
-        }).catch(() => { })
+        }).catch((res) => { 
+            ElMessage({
+              type: "error",
+              message: res.message,
+          });
+        })
 }
 
 
@@ -343,7 +400,7 @@ const filterPhrases = () => {
     phraseNotes.value = rootData
   } else if(functionTextBox.value.includes("bl:")){
     var newStatus = parseInt(functionTextBox.value.substring(3))
-    //setStatusForWords(newStatus)
+    setPhraseMasterStatus(newStatus)
   } 
   else {
     phraseNotes.value = rootData.filter((p) => p.Context.includes(functionTextBox.value))
@@ -372,7 +429,7 @@ const handleRowClick = (event: any, row: any) => {
   if (target.className.includes("el-radio") || target.className.includes("el-checkbox")) {
     return
   }
-  var rowClicked = row.rowData as LRPhraseNoteModel
+  var rowClicked = row.rowData as PhraseNoteModel
   if (currSelectedRow.value == null) {
     currSelectedRow.value = rowClicked
   } else if (currSelectedRow.value != rowClicked) {
@@ -480,7 +537,7 @@ const highLightWord = () => {
 
 // ========================== DIALOG HANDLE ==========================
 
-const closeSearchPhraseDialog = (newPhraseId: string | null) => {
+const closeSearchPhraseDialog = (newPhraseId: number | null) => {
     if (newPhraseId != null && currSelectedRow.value != null) {
         if (!currSelectedRow.value.PhraseIds.includes(newPhraseId)) {
             currSelectedRow.value.PhraseIds.push(newPhraseId)
@@ -503,8 +560,6 @@ const openEditPhraseDialog = (phrase: EditPhraseModel) => {
     editPhraseDialogVisible.value = true
     editPhraseModel.value = phrase
 }
-
-
 
 </script>
 

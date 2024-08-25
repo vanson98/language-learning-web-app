@@ -57,7 +57,7 @@ const props = defineProps<{
     visible: boolean,
     searchText: string | null | undefined,
     currentPhraseId: number | null | undefined,
-    currentMasterPhraseIds: string[] | null | undefined
+    currentMasterPhraseIds: number[] | null | undefined
 }>()
 const emit = defineEmits(["close"])
 

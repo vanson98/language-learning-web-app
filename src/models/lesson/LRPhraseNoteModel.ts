@@ -1,17 +1,16 @@
 import NoteInfo from "../note/NoteInfo"
 
-export default interface LRPhraseNoteModel {
+export default interface PhraseNoteModel {
     CardId: string,
     NoteId: number,
     AudioFileName: string,
     Context: string,
     ContextTranslation: string,
-    DateCreated: Date,
-    PhraseIds: string[],
+    PhraseIds: number[],
     ImageFileName: string,
     Tags: string[]
     ParentPhrases: {
-        NoteId: string,
+        NoteId: number,
         Front: string,
         Meaning: string,
         Example: string

@@ -48,7 +48,7 @@ const emit = defineEmits(["onClose"])
 
 //https://stackoverflow.com/questions/66585688/what-is-the-difference-between-ref-toref-and-torefs
 //const model = toRef(props,'editPhrase')
-const noteId = defineModel<string>('noteId',{required:true})
+const noteId = defineModel<number>('noteId',{required:true})
 const front = defineModel<string>('front',{required:true})
 const meaning = defineModel<string | null>('meaning',{required:true})
 const example = defineModel<string | null>('example',{required:true})
