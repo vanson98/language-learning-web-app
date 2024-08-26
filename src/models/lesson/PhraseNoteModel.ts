@@ -6,10 +6,10 @@ export default interface PhraseNoteModel {
     AudioFileName: string,
     Context: string,
     ContextTranslation: string,
-    PhraseIds: number[],
+    MasterPhraseIds: number[],
     ImageFileName: string,
     Tags: string[]
-    ParentPhrases: {
+    MasterPhrases: {
         NoteId: number,
         Front: string,
         Meaning: string,

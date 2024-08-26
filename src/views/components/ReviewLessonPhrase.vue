@@ -12,19 +12,13 @@
     <el-row style="height: 100%;">
         <el-col :span="14" style="height: 100%;">
             <el-auto-resizer>
-                <template #default="{height,width}">
-                    <el-table-v2 
-                        :columns="columns" 
-                        :data="phraseNotes" 
-                        :width="width" 
-                        :height="height" 
-                        :row-props="getRowProps"
-                        :row-class="rowClass"
-                        :estimated-row-height="80"
-                        fixed>
+                <template #default="{ height, width }">
+                    <el-table-v2 :columns="columns" :data="phraseNotes" :width="width" :height="height"
+                        :row-props="getRowProps" :row-class="rowClass" :estimated-row-height="80" fixed>
                         <template #header-cell="{ column }">
                             <template v-if="column.key == 'selection'">
-                                <ElCheckbox :v-model:model-value="allSelected" @change="(value) => onAllRowSelectionChange(value)" />
+                                <ElCheckbox :v-model:model-value="allSelected"
+                                    @change="(value) => onAllRowSelectionChange(value)" />
                             </template>
                         </template>
 
@@ -40,7 +34,8 @@
                             </template>
                         </template>
                         <template #overlay v-if="loading">
-                            <div class="el-loading-mask" style="display: flex; align-items: center; justify-content: center">
+                            <div class="el-loading-mask"
+                                style="display: flex; align-items: center; justify-content: center">
                                 <ElIcon class="is-loading" color="var(--el-color-primary)" :size="26">
                                     <Loading />
                                 </ElIcon>
@@ -52,7 +47,7 @@
         </el-col>
         <el-col :span="10" style="height: 100%;" v-if="currSelectedRow">
             <div class="phrase-info-box">
-               
+
                 <div class="mb-3">
                     <label>Type Text</label>
                     <ElInput @keydown.enter="goToNextRow" v-model="typeText"></ElInput>
@@ -68,7 +63,8 @@
                         </div>
                         <div>
                             <el-button @click="() => updatPhraseNote(currSelectedRow)" type="primary">Update</el-button>
-                            <el-button @click="() => deletePhrase(currSelectedRow!.NoteId)" type="danger">Remove</el-button>
+                            <el-button @click="() => deletePhrase(currSelectedRow!.NoteId)"
+                                type="danger">Remove</el-button>
                         </div>
                     </div>
                 </div>
@@ -89,7 +85,7 @@
                     <br>
                 </div>
 
-                <template v-for="phrase in currSelectedRow.ParentPhrases">
+                <template v-for="phrase in currSelectedRow.MasterPhrases">
                     <div style="height: auto; margin-bottom: 8px;">
                         <hr>
                         <div class="d-flex justify-content-between mb-3">
@@ -117,7 +113,7 @@
     </el-row>
     <SearchPhraseDialog :visible="searchPhraseDialogVisible" :search-text="selectionPhrase"
         @close="closeSearchPhraseDialog" :currentPhraseId="currSelectedRow?.NoteId"
-        :currentMasterPhraseIds="currSelectedRow?.PhraseIds" />
+        :currentMasterPhraseIds="currSelectedRow?.MasterPhraseIds" />
     <EditPhraseDialog :visible="editPhraseDialogVisible" @on-close="closeEditPhraseDialog"
         v-model:note-id="editPhraseModel.NoteId" v-model:example="editPhraseModel.Example"
         v-model:front="editPhraseModel.Front" v-model:meaning="editPhraseModel.Meaning" />
@@ -126,12 +122,12 @@
 <script lang="ts" setup>
 import { ElTag, ElRow, ElCol, ElCheckbox, Column, ElButton, ElMessageBox, ElMessage, ElInput, ElTableV2, ElAutoResizer, RowClassNameGetter, CheckboxValueType, ElIcon } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
-import {SERVER_BASE_URL} from '../../libs/url'
-import PhraseNoteModel from '../../models/lesson/LRPhraseNoteModel'
+import { SERVER_BASE_URL } from '../../libs/url'
+import PhraseNoteModel from '../../models/lesson/PhraseNoteModel'
 import { onMounted, ref, toRef, toRefs, watch } from 'vue';
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
-import {ajax} from '../../libs/ajax';
+import { ajax } from '../../libs/ajax';
 import AnkiResponseModel from '../../models/response/AnkiResponseModel';
 import SearchPhraseDialog from '../modals/SearchPhraseDialog.vue'
 import EditPhraseDialog from '../modals/EditPhraseDialog.vue'
@@ -146,8 +142,8 @@ const props = defineProps<{
 const autoHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
 
 watch(autoHideUpdatedNoteProp, (newvalue, oldVaue) => {
-  functionTextBox.value = ""
-  filterPhrases()
+    functionTextBox.value = ""
+    filterPhrases()
 })
 
 
@@ -163,22 +159,22 @@ const attachMasterAmount = ref<number>(0)
 
 // =================== Table Variables ====================
 const columns: Column<any>[] = [
-  {
-    key: "selection",
-    width: 30
-  },
-  {
-    key: "Context",
-    dataKey: "Context",
-    title: "LR Phrase",
-    width: 700
-  },
-  {
-    key: "tags",
-    dataKey: "tags",
-    title: "Tags",
-    width: 100
-  },
+    {
+        key: "selection",
+        width: 30
+    },
+    {
+        key: "Context",
+        dataKey: "Context",
+        title: "LR Phrase",
+        width: 700
+    },
+    {
+        key: "tags",
+        dataKey: "tags",
+        title: "Tags",
+        width: 100
+    },
 ]
 
 const typeText = ref<string | null>("")
@@ -233,8 +229,8 @@ const getLessonPhrases = () => {
                         ContextTranslation: item["fields"]["Context translation"].value as string,
                         ImageFileName: item["fields"]["Next Image media filename"].value,
                         AudioFileName: item["fields"]["Audio clip media filename"].value as string,
-                        PhraseIds: (item["fields"]["PhraseIds"].value as string).split(",").filter(id => id != "").map(id => Number(id)),
-                        ParentPhrases: [],
+                        MasterPhraseIds: (item["fields"]["PhraseIds"].value as string).split(",").filter(id => id != "").map(id => Number(id)),
+                        MasterPhrases: [],
                         IsLoadParentPhrase: false,
                         Checked: false
                     })
@@ -246,9 +242,9 @@ const getLessonPhrases = () => {
         })
         .catch(res => {
             ElMessage({
-                    message: res.message,
-                    type: 'error',
-                })
+                message: res.message,
+                type: 'error',
+            })
             loading.value = false
         })
 }
@@ -259,9 +255,9 @@ const updatPhraseNote = (lrPhrase: PhraseNoteModel | null) => {
             NoteId: lrPhrase.NoteId,
             Context: lrPhrase.Context,
             "Context translation": lrPhrase.ContextTranslation,
-            PhraseIds: lrPhrase.PhraseIds.toString().replace("[]", "") as string
+            PhraseIds: lrPhrase.MasterPhraseIds.toString().replace("[]", "") as string
         })).then(res => {
-            if(res.data.error != null){
+            if (res.data.error != null) {
                 ElMessage({
                     type: "error",
                     message: res.data.error,
@@ -274,73 +270,73 @@ const updatPhraseNote = (lrPhrase: PhraseNoteModel | null) => {
             });
         }).catch(res => {
             ElMessage({
-                    type: "error",
-                    message: res.message,
+                type: "error",
+                message: res.message,
             });
         })
     }
 }
 
 const setPhraseMasterStatus = (newStatus: number) => {
-    var masterPhraseIds : number[] = []
-    phraseNotes.value.filter(pn=>pn.Checked).forEach(p=>masterPhraseIds = masterPhraseIds.concat(p.PhraseIds))
+    var masterPhraseIds: number[] = []
+    phraseNotes.value.filter(pn => pn.Checked).forEach(p => masterPhraseIds = masterPhraseIds.concat(p.MasterPhraseIds))
 
     masterPhraseIds = Array.from(new Set(masterPhraseIds));
-    
+
     masterPhraseIds.forEach((pid) => {
         updatePhraseMasterNoteStatus(pid, newStatus)
     })
 }
 
 const updatePhraseMasterNoteStatus = (masterPhraseId: number, newStatus: number) => {
-  ajax.put<AnkiResponseModel>(
-    "/note-status",
-    JSON.stringify({
-      NoteId: masterPhraseId,
-      Status: newStatus.toString()
+    ajax.put<AnkiResponseModel>(
+        "/note-status",
+        JSON.stringify({
+            NoteId: masterPhraseId,
+            Status: newStatus.toString()
+        })
+    ).then((res) => {
+        if (res.data.error) {
+            ElMessage({
+                type: "error",
+                message: res.data.error,
+            });
+            console.log(`base level for master phrase id : ${masterPhraseId} error`)
+            return
+        }
+        ElMessage({
+            type: "success",
+            message: `base level for master phrase id : ${masterPhraseId} successful`,
+        });
+        // if (newStatus != masterPhraseId.Status) {
+        //   analyzeWordStatus(newStatus, masterPhraseId.Status)
+        //   masterPhraseId.Status = newStatus
+        // }
     })
-  ).then((res) => {
-    if (res.data.error) {
-      ElMessage({
-        type: "error",
-        message: res.data.error,
-      });
-      console.log(`base level for master phrase id : ${masterPhraseId} error`)
-      return
-    }
-    ElMessage({
-      type: "success",
-      message: `base level for master phrase id : ${masterPhraseId} successful`,
-    });
-    // if (newStatus != masterPhraseId.Status) {
-    //   analyzeWordStatus(newStatus, masterPhraseId.Status)
-    //   masterPhraseId.Status = newStatus
-    // }
-  })
-    .catch((res) => {
-      console.log(`base level for master phrase id : ${masterPhraseId} error`)
-      ElMessage({
-        type: "error",
-        message: res.message,
-      });
-    });
+        .catch((res) => {
+            console.log(`base level for master phrase id : ${masterPhraseId} error`)
+            ElMessage({
+                type: "error",
+                message: res.message,
+            });
+        });
 };
 
 const getParentPhrase = (lrPhrase: PhraseNoteModel) => {
-    if (lrPhrase.PhraseIds.length > 0 && !lrPhrase.IsLoadParentPhrase) {
-        lrPhrase.ParentPhrases = []
-        ajax.get<AnkiResponseModel>(`/notes?ids=${lrPhrase.PhraseIds.join(",")}`).then(res => {
+    if (lrPhrase.MasterPhraseIds.length > 0 && !lrPhrase.IsLoadParentPhrase) {
+        lrPhrase.MasterPhrases = []
+        ajax.get<AnkiResponseModel>(`/notes?ids=${lrPhrase.MasterPhraseIds.join(",")}`).then(res => {
             if (res.data.error == null && Array.isArray(res.data.result)) {
-                lrPhrase.PhraseIds = [];
+                lrPhrase.MasterPhraseIds = [];
                 res.data.result.forEach((item: any) => {
                     if (item != null && Object.keys(item).length != 0) {
-                        lrPhrase.ParentPhrases.push({
+                        lrPhrase.MasterPhrases.push({
                             NoteId: item.noteId,
-                            Front: item["fields"]["Front"].value as string,
-                            Meaning: item["fields"]["Meaning"].value as string,
-                            Example: item["fields"]["Example"].value as string
+                            Front: item["fields"]["Front"].value,
+                            Meaning: item["fields"]["Meaning"].value,
+                            Example: item["fields"]["Example"].value
                         })
-                        lrPhrase.PhraseIds.push(item.noteId)
+                        lrPhrase.MasterPhraseIds.push(item.noteId)
                     }
                 })
                 lrPhrase.IsLoadParentPhrase = true;
@@ -351,8 +347,8 @@ const getParentPhrase = (lrPhrase: PhraseNoteModel) => {
 
 const removeParentPhrase = (masterPhraseId: number) => {
     if (currSelectedRow.value != null) {
-        currSelectedRow.value.PhraseIds = currSelectedRow.value.PhraseIds.filter(pid => pid != masterPhraseId)
-        currSelectedRow.value.ParentPhrases = currSelectedRow.value.ParentPhrases.filter(pp => pp.NoteId != masterPhraseId)
+        currSelectedRow.value.MasterPhraseIds = currSelectedRow.value.MasterPhraseIds.filter(pid => pid != masterPhraseId)
+        currSelectedRow.value.MasterPhrases = currSelectedRow.value.MasterPhrases.filter(pp => pp.NoteId != masterPhraseId)
         updatPhraseNote(currSelectedRow.value)
     }
 }
@@ -384,11 +380,11 @@ const deletePhrase = (noteId: number) => {
             }).catch(res => {
                 console.error(res)
             })
-        }).catch((res) => { 
+        }).catch((res) => {
             ElMessage({
-              type: "error",
-              message: res.message,
-          });
+                type: "error",
+                message: res.message,
+            });
         })
 }
 
@@ -396,50 +392,49 @@ const deletePhrase = (noteId: number) => {
 // ====================================== TABLE HANDLE =========================================
 
 const filterPhrases = () => {
-  if (!functionTextBox.value) {
-    phraseNotes.value = rootData
-  } else if(functionTextBox.value.includes("bl:")){
-    var newStatus = parseInt(functionTextBox.value.substring(3))
-    setPhraseMasterStatus(newStatus)
-  } 
-  else {
-    phraseNotes.value = rootData.filter((p) => p.Context.includes(functionTextBox.value))
-  }
-  if (props.autoHideUpdatedNote) {
-    phraseNotes.value = phraseNotes.value.filter(p => !updatedNodeIds.includes(p.NoteId))
-  }
-  //scanAllWordStatus()
+    if (!functionTextBox.value) {
+        phraseNotes.value = rootData
+    } else if (functionTextBox.value.includes("bl:")) {
+        var newStatus = parseInt(functionTextBox.value.substring(3))
+        setPhraseMasterStatus(newStatus)
+    }
+    else {
+        phraseNotes.value = rootData.filter((p) => p.Context.includes(functionTextBox.value))
+    }
+    if (props.autoHideUpdatedNote) {
+        phraseNotes.value = phraseNotes.value.filter(p => !updatedNodeIds.includes(p.NoteId))
+    }
+    //scanAllWordStatus()
 }
 
 const onAllRowSelectionChange = (value: CheckboxValueType) => {
-  phraseNotes.value = phraseNotes.value.map(phrase => {
-    phrase.Checked = value as boolean
-    return phrase
-  })
+    phraseNotes.value = phraseNotes.value.map(phrase => {
+        phrase.Checked = value as boolean
+        return phrase
+    })
 }
 
 const getRowProps = (row: any) => {
-  return {
-    onClick: (event: any) => handleRowClick(event, row),
-  }
+    return {
+        onClick: (event: any) => handleRowClick(event, row),
+    }
 }
 
 const handleRowClick = (event: any, row: any) => {
-  var target = event.target as HTMLElement
-  if (target.className.includes("el-radio") || target.className.includes("el-checkbox")) {
-    return
-  }
-  var rowClicked = row.rowData as PhraseNoteModel
-  if (currSelectedRow.value == null) {
-    currSelectedRow.value = rowClicked
-  } else if (currSelectedRow.value != rowClicked) {
-    currSelectedRow.value = rowClicked
-  }
-  playAudio()
+    var target = event.target as HTMLElement
+    if (target.className.includes("el-radio") || target.className.includes("el-checkbox")) {
+        return
+    }
+    var rowClicked = row.rowData as PhraseNoteModel
+    if (currSelectedRow.value != rowClicked) {
+        currSelectedRow.value = rowClicked
+        getParentPhrase(currSelectedRow.value)
+    }
+    playAudio()
 }
 
 const playAudio = () => {
-    if(!props.autoPlayAudio){
+    if (!props.autoPlayAudio) {
         return
     }
     var fileName = currSelectedRow.value?.AudioFileName
@@ -453,7 +448,7 @@ const playAudio = () => {
         const url = URL.createObjectURL(blob);
         // Create an audio element and play the MP3
         if (currAudio != null) {
-        currAudio.pause()
+            currAudio.pause()
         }
         currAudio = new Audio(url);
         currAudio.play();
@@ -463,11 +458,11 @@ const playAudio = () => {
 };
 
 const rowClass = ({ rowData }: Parameters<RowClassNameGetter<any>>[0]) => {
-  if (rowData.NoteId === currSelectedRow.value?.NoteId) {
-    return 'highlight-row'
-  } else {
-    return ''
-  }
+    if (rowData.NoteId === currSelectedRow.value?.NoteId) {
+        return 'highlight-row'
+    } else {
+        return ''
+    }
 }
 
 window.addEventListener('keydown', (e) => {
@@ -495,35 +490,35 @@ window.addEventListener('keydown', (e) => {
 });
 
 const goToNextRow = () => {
-  if (currSelectedRow.value != null) {
-    var currentRowIndex = phraseNotes.value.indexOf(currSelectedRow.value);
+    if (currSelectedRow.value != null) {
+        var currentRowIndex = phraseNotes.value.indexOf(currSelectedRow.value);
 
-    if (currentRowIndex == phraseNotes.value.length - 1) {
-      return;
+        if (currentRowIndex == phraseNotes.value.length - 1) {
+            return;
+        }
+        var nextRow = phraseNotes.value.at(currentRowIndex + 1)
+        if (nextRow) {
+            currSelectedRow.value = nextRow
+            playAudio()
+            typeText.value = null
+        }
     }
-    var nextRow = phraseNotes.value.at(currentRowIndex + 1)
-    if(nextRow){
-      currSelectedRow.value = nextRow
-      playAudio()
-      typeText.value = null
-    }
-  }
 }
 
 const goToPreviousRow = () => {
-  if (currSelectedRow.value != null) {
-    var currentRowIndex = phraseNotes.value.indexOf(currSelectedRow.value);
+    if (currSelectedRow.value != null) {
+        var currentRowIndex = phraseNotes.value.indexOf(currSelectedRow.value);
 
-    if (currentRowIndex == 0) {
-      return;
+        if (currentRowIndex == 0) {
+            return;
+        }
+        var nextRow = phraseNotes.value.at(currentRowIndex - 1)
+        if (nextRow) {
+            currSelectedRow.value = nextRow
+            playAudio()
+            typeText.value = null
+        }
     }
-    var nextRow = phraseNotes.value.at(currentRowIndex - 1)
-    if(nextRow){
-      currSelectedRow.value = nextRow
-      playAudio()
-      typeText.value = null
-    }
-  }
 }
 
 const highLightWord = () => {
@@ -539,8 +534,8 @@ const highLightWord = () => {
 
 const closeSearchPhraseDialog = (newPhraseId: number | null) => {
     if (newPhraseId != null && currSelectedRow.value != null) {
-        if (!currSelectedRow.value.PhraseIds.includes(newPhraseId)) {
-            currSelectedRow.value.PhraseIds.push(newPhraseId)
+        if (!currSelectedRow.value.MasterPhraseIds.includes(newPhraseId)) {
+            currSelectedRow.value.MasterPhraseIds.push(newPhraseId)
             currSelectedRow.value.IsLoadParentPhrase = false;
             getParentPhrase(currSelectedRow.value)
         }

@@ -10,9 +10,9 @@
                     @keydown="handleKeyDownOnSearchPhraseInput" placeholder="Phrase Text" :tabindex="0">
                 </el-input>
                 <label class="mt-2">Total anki search result: {{ totalAnkiSearchResult }}</label>
-                <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" remote :remote-method="searchNote" clearable
+                <el-select-v2 v-model:model-value="selectedPhraseId" style="width: 100%;" remote :remote-method="searchNote"
                     :options="phraseOptions" :loading="loading" placeholder="Please enter phrase name" filterable
-                    :tabindex="1">
+                    :tabindex="1" value-key="value">
                     <template #default="{ item }">
                         <b v-html="item.label" class="me-2"></b>
                         <span>&#8594; </span>
@@ -109,13 +109,21 @@ const confirm = () => {
     }
 }
 
-const addMoreParentPhrase = (phraseId: string) => {
+const addMoreParentPhrase = (phraseId: number) => {
     if (props.currentMasterPhraseIds) {
         var parentPhraseIds = [...props.currentMasterPhraseIds, phraseId].join(",")
-        ajax.post<AnkiResponseModel>(`/parent-phrase?noteId=${props.currentPhraseId}&phraseIds=${parentPhraseIds}`)
+        var requestData = JSON.stringify({
+            NoteId: phraseId,
+            PhraseIds: parentPhraseIds
+        })
+        ajax.put<AnkiResponseModel>("/parent-phrase",requestData)
             .then(res => {
                 if (res.status == 200 && res.data.error == null) {
                     closeDialog(phraseId)
+                    ElMessage({
+                        message: "Add parent phrase success",
+                        type: 'success',
+                    })
                 } else {
                     ElMessage({
                         message: "Add parent phrase error: " + res.data.error,
@@ -125,7 +133,7 @@ const addMoreParentPhrase = (phraseId: string) => {
             })
             .catch(res => {
                 ElMessage({
-                    message: "Add parent phrase error: " + res.error,
+                    message: "Add parent phrase error: " + res.message,
                     type: 'error',
                 })
             })
@@ -144,18 +152,18 @@ const handleKeyDownOnSearchPhraseInput = (event: Event) : any=> {
 
 const addNewPhraseToAnki = () => {
     if (searchPhraseText.value.trim() != "") {
-        ajax.post<AnkiResponseModel>("/phrase", JSON.stringify({
+        ajax.post<AnkiResponseModel>("/phrase-master", JSON.stringify({
             Front: searchPhraseText.value,
             Meaning: googlePhraseMeaning.value,
             Example: examplePhrase.value
         })).then(res => {
-            if (res.data.error != null) {
+            if (res.data.error) {
                 ElMessage({
                     message: res.data.error,
                     type: 'error',
                 })
             } else {
-                addMoreParentPhrase(res.data.result as string)
+                addMoreParentPhrase(res.data.result as number)
             }
         }).catch(res => {
             console.log(res)
@@ -164,7 +172,7 @@ const addNewPhraseToAnki = () => {
 
 }
 
-const closeDialog = (newParentPhraseId: string | null) => {
+const closeDialog = (newParentPhraseId: number | null) => {
     emit("close", newParentPhraseId)
 }
 
