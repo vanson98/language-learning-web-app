@@ -1,20 +1,16 @@
-import NoteInfo from "../note/NoteInfo"
+import PhraseMasterModel from "./PhraseMasterModel"
 
 export default interface PhraseNoteModel {
     CardId: string,
     NoteId: number,
+    VideoTitle: string,
     AudioFileName: string,
     Context: string,
     ContextTranslation: string,
-    MasterPhraseIds: number[],
+    PhraseMasterIds: number[],
     ImageFileName: string,
     Tags: string[]
-    MasterPhrases: {
-        NoteId: number,
-        Front: string,
-        Meaning: string,
-        Example: string
-    }[] ,
+    PhraseMasters: PhraseMasterModel[] ,
     IsLoadParentPhrase: boolean,
     Checked: boolean
 }
