@@ -1,5 +1,5 @@
 <template>
-    <el-row>
+    <el-row style="height: 5%;">
         <el-col :span="4">
             <el-input v-model="functionTextBox" placeholder="bl: " @keyup.enter="filterPhrases"></el-input>
         </el-col>
@@ -8,9 +8,16 @@
                 <el-button @click="getLessonPhrases" type="primary">Load Data</el-button>
             </div>
         </el-col>
+        <el-col :span="12">
+            <div class="phrase-status-ctn">
+                <span>Total Phrase: {{ totalPhrase }} </span>
+                <span>Updated Notes: {{ totalUpdatedNote }}</span>
+                <span>Attach Phrase Master: {{ attachMasterAmount }}</span>
+            </div>
+        </el-col>
     </el-row>
-    <el-row style="height: 100%;">
-        <el-col :span="14" style="height: 100%;">
+    <el-row style="height: 95%;  border: 1px solid; border-color: #8080806f;">
+        <el-col :span="14" style="height: 100%; padding-right: 8px;">
             <el-auto-resizer>
                 <template #default="{ height, width }">
                     <el-table-v2 :columns="columns" :data="phraseNotes" :width="width" :height="height"
@@ -59,7 +66,7 @@
                     <div class=" mb-2 d-flex justify-content-between flex-grow-1">
                         <el-button @click="highLightWord" type="warning">Highlight</el-button>
                         <el-button @click="() => playAudio()" type="primary">Replay Audio</el-button>
-                        <el-button @click="() => updateAndLevelDownPhraseMaster(currSelectedRow!)" type="primary">Update -</el-button>
+                        <el-button @click="() => updateAndLevelDownPhraseMaster(currSelectedRow!)" type="default">Update -</el-button>
                         <el-button @click="() => updateAndLevelUpPhraseMaster(currSelectedRow!)" type="primary">Update +</el-button>
                         <el-button @click="() => deletePhrase(currSelectedRow!.NoteId)" type="danger">Remove</el-button>
                     </div>
@@ -144,12 +151,12 @@ watch(autoHideUpdatedNoteProp, (newvalue, oldVaue) => {
 
 // =================== Data Variables ===============
 let rootData: PhraseNoteModel[];
-let updatedNodeIds: number[] = [1700807149035];
+let updatedNodeIds: number[] = [];
 
 const phraseNotes = ref<PhraseNoteModel[]>([]);
 
 const totalPhrase = ref<number>(0)
-const updatedPhrase = ref<number>(0)
+const totalUpdatedNote = ref<number>(0)
 const attachMasterAmount = ref<number>(0)
 
 // =================== Table Variables ====================
@@ -247,38 +254,39 @@ const getLessonPhrases = () => {
         })
 }
 
-
 //update phrase note and level up phrase master
 const updateAndLevelUpPhraseMaster = (phraseNote: PhraseNoteModel) => {
-    updatePhraseNote(phraseNote, () => {
+    updatePhraseNote(phraseNote,false ,() => {
         phraseNote.PhraseMasters.forEach((pm) => {
-            var newStatus = pm.Status + 1
-            updatePhraseMasterNoteStatus(pm, newStatus)
+            if(pm.Status < 5){
+                var newStatus = pm.Status + 1
+                updatePhraseMasterNoteStatus(pm, newStatus)
+            }
         })
+        recordUpdatedPhrase(phraseNote)
     })
-   
-    // hide update phrase
-    //...
 }
 
 //update phrase note and level down phrase master
 const updateAndLevelDownPhraseMaster = (phraseNote: PhraseNoteModel) => {
-    updatePhraseNote(phraseNote, () => {
+    updatePhraseNote(phraseNote,false ,() => {
         phraseNote.PhraseMasters.forEach((pm) => {
-            var newStatus = pm.Status - 1
-            updatePhraseMasterNoteStatus(pm, newStatus)
+            if(pm.Status > 1){
+                var newStatus = pm.Status - 1
+                updatePhraseMasterNoteStatus(pm, newStatus)
+            }
         })
+        recordUpdatedPhrase(phraseNote)
     })
-    // hide update phrase
 }
 
 // update phrase note but dont hide it
-const updatePhraseNote = (lrPhrase: PhraseNoteModel,callBack: (() => void) | null) => {
+const updatePhraseNote = (phraseNote: PhraseNoteModel,formUpdateRange: boolean, callBack: (() => void) | null) => {
     ajax.put<AnkiResponseModel>("/phrase", JSON.stringify({
-        NoteId: lrPhrase.NoteId,
-        Context: lrPhrase.Context,
-        "Context translation": lrPhrase.ContextTranslation,
-        PhraseIds: lrPhrase.PhraseMasterIds.toString().replace("[]", "") as string
+        NoteId: phraseNote.NoteId,
+        Context: phraseNote.Context,
+        "Context translation": phraseNote.ContextTranslation,
+        PhraseIds: phraseNote.PhraseMasterIds.toString().replace("[]", "") as string
     })).then(res => {
         if (res.data.error != null) {
             ElMessage({
@@ -290,6 +298,23 @@ const updatePhraseNote = (lrPhrase: PhraseNoteModel,callBack: (() => void) | nul
             type: "success",
             message: `update phrase successful`,
         });
+        if (props.autoHideUpdatedNote) {
+            phraseNote.Checked = false;
+            if (!formUpdateRange) {
+                //--> auto move current row to next row or next checked row
+                var crrRowIndex = phraseNotes.value.indexOf(phraseNote)
+
+                // priority for checked row
+                var nextRowIndex = phraseNotes.value.findIndex((w, idx) => w.Checked)
+                if (nextRowIndex == -1) {
+                    nextRowIndex = phraseNotes.value.findIndex((w, idx) => idx == crrRowIndex + 1)
+                }
+                if (nextRowIndex != -1) {
+                    currSelectedRow.value = phraseNotes.value[nextRowIndex]
+                    playAudio()
+                }
+            }
+        }
         if(callBack != null){
             callBack()
         }
@@ -320,13 +345,6 @@ const setRangePhraseMasterStatus = (newStatus: number) => {
 }
 
 const updatePhraseMasterNoteStatus = (phraseMaster: PhraseMasterModel, newStatus: number) => {
-    if (newStatus < 1 || newStatus > 5) {
-        ElMessage({
-            type: "error",
-            message: "Status must be in range 1->5!"
-        })
-        return
-    }
     ajax.put<AnkiResponseModel>(
         "/note-status",
         JSON.stringify({
@@ -344,7 +362,7 @@ const updatePhraseMasterNoteStatus = (phraseMaster: PhraseMasterModel, newStatus
         }
         ElMessage({
             type: "success",
-            message: `base level for master phrase id : ${phraseMaster.NoteId} successful`,
+            message: `update phrase master status successful`,
         });
         phraseMaster.Status = newStatus
         // if (newStatus != masterPhraseId.Status) {
@@ -390,7 +408,7 @@ const removeParentPhrase = (masterPhraseId: number) => {
     if (currSelectedRow.value) {
         currSelectedRow.value.PhraseMasterIds = currSelectedRow.value.PhraseMasterIds.filter(pid => pid != masterPhraseId)
         currSelectedRow.value.PhraseMasters = currSelectedRow.value.PhraseMasters.filter(pp => pp.NoteId != masterPhraseId)
-        updatePhraseNote(currSelectedRow.value,null)
+        updatePhraseNote(currSelectedRow.value,false,null)
     }
 }
 
@@ -429,6 +447,17 @@ const deletePhrase = (noteId: number) => {
         })
 }
 
+const recordUpdatedPhrase = (phrase: PhraseNoteModel) => {
+  if (updatedNodeIds.includes(phrase.NoteId)) {
+    return
+  } else {
+    updatedNodeIds.push(phrase.NoteId)
+    totalUpdatedNote.value++
+    if (props.autoHideUpdatedNote) {
+      phraseNotes.value = phraseNotes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
+    }
+  }
+}
 
 // ====================================== TABLE HANDLE =========================================
 
@@ -601,14 +630,25 @@ const openEditPhraseDialog = (phrase: EditPhraseModel) => {
 <style>
 .phrase-info-box {
     width: 100%;
-    height: 100%;
-    border: 1px solid;
-    padding: 10px;
-    overflow: scroll;
+  height: 100%;
+  padding: 0 8px;
+  overflow: scroll;
+  border-left: 1px solid;
+  border-color: #8080806f;
 }
 
 .my-toolbar {
     height: 0;
     padding: 0 !important;
 }
+
+.phrase-status-ctn {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  /* 3 columns */
+  grid-template-rows: repeat(1, 1fr);
+  /* 2 rows */
+  gap: 10px;
+}
+
 </style>
