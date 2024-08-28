@@ -12,7 +12,7 @@
             <div class="phrase-status-ctn">
                 <span>Total Phrase: {{ totalPhrase }} </span>
                 <span>Updated Notes: {{ totalUpdatedNote }}</span>
-                <span>Attach Phrase Master: {{ attachMasterAmount }}</span>
+                <span>Attach Phrase Master: {{ totalMasterAttach }}</span>
             </div>
         </el-col>
     </el-row>
@@ -112,8 +112,8 @@
             </div>
         </el-col>
     </el-row>
-    <SearchPhraseDialog :visible="searchPhraseDialogVisible" :search-text="selectionPhrase"
-        @close="closeSearchPhraseDialog" :currentPhraseId="currSelectedRow?.NoteId"
+    <AttachPhraseMasterDialog :visible="attachPhraseMasterDialogVisible" :search-text="selectionPhrase"
+        @close="closeAttachPhraseMasterDialog" :currentPhraseId="currSelectedRow?.NoteId"
         :currentMasterPhraseIds="currSelectedRow?.PhraseMasterIds" />
     <EditPhraseDialog :visible="editPhraseDialogVisible" @on-close="closeEditPhraseDialog"
         v-model:note-id="editPhraseModel.NoteId" v-model:example="editPhraseModel.Example"
@@ -130,7 +130,7 @@ import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
 import { ajax } from '../../libs/ajax';
 import AnkiResponseModel from '../../models/response/AnkiResponseModel';
-import SearchPhraseDialog from '../modals/SearchPhraseDialog.vue'
+import AttachPhraseMasterDialog from '../modals/AttachPhraseMasterDialog.vue'
 import EditPhraseDialog from '../modals/EditPhraseDialog.vue'
 import EditPhraseModel from '../../models/phrase/EditPhraseModel';
 import PhraseMasterModel from '@/models/lesson/PhraseMasterModel';
@@ -157,7 +157,7 @@ const phraseNotes = ref<PhraseNoteModel[]>([]);
 
 const totalPhrase = ref<number>(0)
 const totalUpdatedNote = ref<number>(0)
-const attachMasterAmount = ref<number>(0)
+const totalMasterAttach = ref<number>(0)
 
 // =================== Table Variables ====================
 const columns: Column<any>[] = [
@@ -190,9 +190,15 @@ let currAudio: HTMLAudioElement
 
 const selectionPhrase = ref<string | undefined>("")
 
+watch(currSelectedRow,(newValue, oldValue)=>{
+    if(newValue){
+        getParentPhrase(newValue)
+    }
+})
+
 // ====================== Dialog Variable ==================
 
-const searchPhraseDialogVisible = ref<boolean>(false)
+const attachPhraseMasterDialogVisible = ref<boolean>(false)
 const editPhraseDialogVisible = ref<boolean>(false)
 const editPhraseModel = ref<EditPhraseModel>({
     NoteId: 0,
@@ -204,9 +210,10 @@ const editPhraseModel = ref<EditPhraseModel>({
 // ====================================== DATA HANDLE =========================================
 onMounted(() => {
     getLessonPhrases()
+    getUpdatedNoteIds()
 })
 
-
+// get lesson phrases
 const getLessonPhrases = () => {
     functionTextBox.value = ""
     loading.value = true
@@ -237,12 +244,9 @@ const getLessonPhrases = () => {
                         IsLoadParentPhrase: false,
                         Checked: false
                     }
-                    getParentPhrase(phrase)
                     rootData.push(phrase)
                 })
                 filterPhrases()
-                //currSelectedRow.value = phraseNotes.value[0]
-                //getParentPhrase(phraseNotes.value[0])
             }
         })
         .catch(res => {
@@ -252,6 +256,18 @@ const getLessonPhrases = () => {
             })
             loading.value = false
         })
+}
+
+const getUpdatedNoteIds = () => {
+  const today = new Date();
+  const year = String(today.getFullYear()).substring(2);
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  ajax.get<string[]>(`/updated-noteids?userid=${15091998}&date=${day + month + year}`).then((res) => {
+    updatedNodeIds = res.data.map(Number)
+  }).catch((res) => {
+    console.log(res)
+  })
 }
 
 //update phrase note and level up phrase master
@@ -459,6 +475,12 @@ const recordUpdatedPhrase = (phrase: PhraseNoteModel) => {
   }
 }
 
+const analyzeWordStatus = () => {
+  totalPhrase.value = rootData.length
+  totalUpdatedNote.value = updatedNodeIds.length
+  totalMasterAttach.value = rootData.filter(p=>p.PhraseMasterIds.length > 0).length
+}
+
 // ====================================== TABLE HANDLE =========================================
 
 const filterPhrases = () => {
@@ -467,14 +489,15 @@ const filterPhrases = () => {
     } else if (functionTextBox.value.includes("bl:")) {
         var newStatus = parseInt(functionTextBox.value.substring(3))
         setRangePhraseMasterStatus(newStatus)
-    }
-    else {
+    }else if (functionTextBox.value.includes("na:")) {
+        phraseNotes.value = rootData.filter(p=>p.PhraseMasterIds.length==0)
+    }else {
         phraseNotes.value = rootData.filter((p) => p.Context.includes(functionTextBox.value))
     }
     if (props.autoHideUpdatedNote) {
         phraseNotes.value = phraseNotes.value.filter(p => !updatedNodeIds.includes(p.NoteId))
     }
-    //scanAllWordStatus()
+    analyzeWordStatus()
 }
 
 const onAllRowSelectionChange = (value: CheckboxValueType) => {
@@ -550,7 +573,7 @@ window.addEventListener('keydown', (e) => {
     if (targetElement.className == "ql-editor") {
         if (e.ctrlKey && e.key.toLowerCase() === 'q') {
             selectionPhrase.value = window.getSelection()?.toString()
-            searchPhraseDialogVisible.value = true
+            attachPhraseMasterDialogVisible.value = true
         }
         if (e.ctrlKey && e.key == 'a') {
             highLightWord()
@@ -601,15 +624,18 @@ const highLightWord = () => {
 
 // ========================== DIALOG HANDLE ==========================
 
-const closeSearchPhraseDialog = (newPhraseId: number | null) => {
+const closeAttachPhraseMasterDialog = (newPhraseId: number | null) => {
     if (newPhraseId != null && currSelectedRow.value != null) {
         if (!currSelectedRow.value.PhraseMasterIds.includes(newPhraseId)) {
+            if(currSelectedRow.value.PhraseMasterIds.length == 0){
+                totalMasterAttach.value++
+            }
             currSelectedRow.value.PhraseMasterIds.push(newPhraseId)
             currSelectedRow.value.IsLoadParentPhrase = false;
             getParentPhrase(currSelectedRow.value)
         }
     }
-    searchPhraseDialogVisible.value = false
+    attachPhraseMasterDialogVisible.value = false
 }
 
 const closeEditPhraseDialog = (isUpdated: boolean) => {
