@@ -13,11 +13,11 @@
           <template #dropdown>
             <ElDropdownMenu>
               <el-dropdown-item @click="selectTopTenWordNote">Select top 10</el-dropdown-item>
+              <el-dropdown-item @click="highLightAllWord">Highlight All</el-dropdown-item>
+              <el-dropdown-item @click="fillIPAForWord">Fill IPA</el-dropdown-item>
               <el-dropdown-item @click="levelUpStatus">Status +1</el-dropdown-item>
               <el-dropdown-item @click="levelDownStatus">Status -1</el-dropdown-item>
               <el-dropdown-item @click="updateRangeWord">Update</el-dropdown-item>
-              <el-dropdown-item @click="highLightAllWord">Highlight All</el-dropdown-item>
-              <el-dropdown-item @click="fillIPAForWord">Fill IPA</el-dropdown-item>
             </ElDropdownMenu>
           </template>
         </el-dropdown>

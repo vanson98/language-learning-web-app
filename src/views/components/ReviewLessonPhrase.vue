@@ -4,8 +4,23 @@
             <el-input v-model="functionTextBox" placeholder="bl: " @keyup.enter="filterPhrases"></el-input>
         </el-col>
         <el-col :span="4">
-            <div class="ms-5">
-                <el-button @click="getLessonPhrases" type="primary">Load Data</el-button>
+            <div class="d-flex">
+                <div class="ms-1 me-1">
+                    <el-button @click="getLessonPhrases" type="primary">Load Data</el-button>
+                </div>
+                
+                <ElDropdown>
+                    <el-button type="primary">
+                        Action
+                    </el-button>
+                    <template #dropdown>
+                        <ElDropdownMenu>
+                            <el-dropdown-item @click="selectTopTenPhraseNote">Select top 10</el-dropdown-item>
+                            <el-dropdown-item @click="levelUpRnage">Status +1</el-dropdown-item>
+                            <el-dropdown-item @click="levelDownRange">Status -1</el-dropdown-item>
+                        </ElDropdownMenu>
+                    </template>
+                </ElDropdown>
             </div>
         </el-col>
         <el-col :span="12">
@@ -66,8 +81,10 @@
                     <div class=" mb-2 d-flex justify-content-between flex-grow-1">
                         <el-button @click="highLightWord" type="warning">Highlight</el-button>
                         <el-button @click="() => playAudio()" type="primary">Replay Audio</el-button>
-                        <el-button @click="() => updateAndLevelDownPhraseMaster(currSelectedRow!)" type="default">Update -</el-button>
-                        <el-button @click="() => updateAndLevelUpPhraseMaster(currSelectedRow!)" type="primary">Update +</el-button>
+                        <el-button @click="() => updateAndLevelDownPhraseMaster(currSelectedRow!,false)" type="default">Update
+                            -</el-button>
+                        <el-button @click="() => updateAndLevelUpPhraseMaster(currSelectedRow!,false)" type="primary">Update
+                            +</el-button>
                         <el-button @click="() => deletePhrase(currSelectedRow!.NoteId)" type="danger">Remove</el-button>
                     </div>
                 </div>
@@ -121,7 +138,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ElTag, ElRow, ElCol, ElCheckbox, Column, ElButton, ElMessageBox, ElMessage, ElInput, ElTableV2, ElAutoResizer, RowClassNameGetter, CheckboxValueType, ElIcon } from 'element-plus'
+import { ElTag, ElRow, ElCol, ElCheckbox, Column, ElButton, ElMessageBox, ElMessage, ElInput, ElTableV2, ElAutoResizer, RowClassNameGetter, CheckboxValueType, ElIcon, ElDropdownMenu, ElDropdownItem, ElDropdown } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 import { SERVER_BASE_URL } from '../../libs/url'
 import PhraseNoteModel from '../../models/lesson/PhraseNoteModel'
@@ -271,8 +288,8 @@ const getUpdatedNoteIds = () => {
 }
 
 //update phrase note and level up phrase master
-const updateAndLevelUpPhraseMaster = (phraseNote: PhraseNoteModel) => {
-    updatePhraseNote(phraseNote,false ,() => {
+const updateAndLevelUpPhraseMaster = (phraseNote: PhraseNoteModel,fromRange: boolean) => {
+    updatePhraseNote(phraseNote,fromRange ,() => {
         phraseNote.PhraseMasters.forEach((pm) => {
             if(pm.Status < 5){
                 var newStatus = pm.Status + 1
@@ -284,8 +301,8 @@ const updateAndLevelUpPhraseMaster = (phraseNote: PhraseNoteModel) => {
 }
 
 //update phrase note and level down phrase master
-const updateAndLevelDownPhraseMaster = (phraseNote: PhraseNoteModel) => {
-    updatePhraseNote(phraseNote,false ,() => {
+const updateAndLevelDownPhraseMaster = (phraseNote: PhraseNoteModel,fromRange: boolean) => {
+    updatePhraseNote(phraseNote,fromRange ,() => {
         phraseNote.PhraseMasters.forEach((pm) => {
             if(pm.Status > 1){
                 var newStatus = pm.Status - 1
@@ -481,6 +498,22 @@ const analyzeWordStatus = () => {
   totalMasterAttach.value = rootData.filter(p=>p.PhraseMasterIds.length > 0).length
 }
 
+const levelUpRnage = () =>{
+    phraseNotes.value.forEach(p=>{
+        if(p.Checked){
+            updateAndLevelUpPhraseMaster(p,true)
+        }
+    })
+}
+
+const levelDownRange = () =>{
+    phraseNotes.value.forEach(p=>{
+        if(p.Checked){
+            updateAndLevelDownPhraseMaster(p,true)
+        }
+    })
+}
+
 // ====================================== TABLE HANDLE =========================================
 
 const filterPhrases = () => {
@@ -621,7 +654,13 @@ const highLightWord = () => {
     }
 }
 
-
+const selectTopTenPhraseNote = () => {
+  phraseNotes.value.forEach((w, i) => {
+    if (i < 10) {
+      w.Checked = true
+    }
+  })
+}
 // ========================== DIALOG HANDLE ==========================
 
 const closeAttachPhraseMasterDialog = (newPhraseId: number | null) => {
