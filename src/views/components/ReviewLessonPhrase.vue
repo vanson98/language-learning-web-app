@@ -263,6 +263,8 @@ const getLessonPhrases = () => {
                     }
                     rootData.push(phrase)
                 })
+                totalPhrase.value = rootData.length
+                totalMasterAttach.value = rootData.filter(p=>p.PhraseMasterIds.length > 0).length
                 filterPhrases()
             }
         })
@@ -282,6 +284,7 @@ const getUpdatedNoteIds = () => {
   const day = String(today.getDate()).padStart(2, '0')
   ajax.get<string[]>(`/updated-noteids?userid=${15091998}&date=${day + month + year}`).then((res) => {
     updatedNodeIds = res.data.map(Number)
+    totalUpdatedNote.value = updatedNodeIds.length
   }).catch((res) => {
     console.log(res)
   })
@@ -296,7 +299,6 @@ const updateAndLevelUpPhraseMaster = (phraseNote: PhraseNoteModel,fromRange: boo
                 updatePhraseMasterNoteStatus(pm, newStatus)
             }
         })
-        recordUpdatedPhrase(phraseNote)
     })
 }
 
@@ -309,7 +311,6 @@ const updateAndLevelDownPhraseMaster = (phraseNote: PhraseNoteModel,fromRange: b
                 updatePhraseMasterNoteStatus(pm, newStatus)
             }
         })
-        recordUpdatedPhrase(phraseNote)
     })
 }
 
@@ -348,6 +349,7 @@ const updatePhraseNote = (phraseNote: PhraseNoteModel,formUpdateRange: boolean, 
                 }
             }
         }
+        recordUpdatedPhrase(phraseNote)
         if(callBack != null){
             callBack()
         }
@@ -398,10 +400,6 @@ const updatePhraseMasterNoteStatus = (phraseMaster: PhraseMasterModel, newStatus
             message: `update phrase master status successful`,
         });
         phraseMaster.Status = newStatus
-        // if (newStatus != masterPhraseId.Status) {
-        //   analyzeWordStatus(newStatus, masterPhraseId.Status)
-        //   masterPhraseId.Status = newStatus
-        // }
     })
         .catch((res) => {
             console.log(`base level for master phrase id : ${phraseMaster.NoteId} error`)
@@ -492,12 +490,6 @@ const recordUpdatedPhrase = (phrase: PhraseNoteModel) => {
   }
 }
 
-const analyzeWordStatus = () => {
-  totalPhrase.value = rootData.length
-  totalUpdatedNote.value = updatedNodeIds.length
-  totalMasterAttach.value = rootData.filter(p=>p.PhraseMasterIds.length > 0).length
-}
-
 const levelUpRnage = () =>{
     phraseNotes.value.forEach(p=>{
         if(p.Checked){
@@ -530,7 +522,6 @@ const filterPhrases = () => {
     if (props.autoHideUpdatedNote) {
         phraseNotes.value = phraseNotes.value.filter(p => !updatedNodeIds.includes(p.NoteId))
     }
-    analyzeWordStatus()
 }
 
 const onAllRowSelectionChange = (value: CheckboxValueType) => {

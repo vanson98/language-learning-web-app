@@ -335,6 +335,7 @@ const getLessonWords = () => {
           totalWord.value++
           rootData.push(wordNote)
         });
+        scanAllWordStatus()
         filterWords()
       }
       loading.value = false
@@ -662,7 +663,6 @@ const filterWords = () => {
   if (props.autoHideUpdatedNote) {
     wordNotes.value = wordNotes.value.filter(w => !updatedNodeIds.includes(w.NoteId))
   }
-  scanAllWordStatus()
   sortWordByLemmaAsc()
 }
 
@@ -822,7 +822,7 @@ const scanAllWordStatus = () => {
   learnedWordAmount.value = 0
   knownWordAmount.value = 0
   updatedWord.value = updatedNodeIds.length
-  wordNotes.value.forEach((word) => {
+  rootData.forEach((word) => {
     analyzeWordStatus(word.Status)
   })
 }
