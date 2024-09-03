@@ -234,6 +234,7 @@ onMounted(() => {
 const getLessonPhrases = () => {
     functionTextBox.value = ""
     loading.value = true
+    currSelectedRow.value = null
     ajax.get<AnkiResponseModel>(`/phrase-notes?vid=${props.videoId}&searchContext=${functionTextBox.value}`)
         .then(res => {
             loading.value = false
@@ -455,7 +456,7 @@ const deletePhrase = (noteId: number) => {
     )
         .then(() => {
             ajax.delete<AnkiResponseModel>(`note?noteId=${noteId}&audioFileName=${currSelectedRow.value?.AudioFileName}&imageFileName=${currSelectedRow.value?.ImageFileName}`).then(res => {
-                if (res.data.error != null) {
+                if (res.data.error) {
                     ElMessage({
                         type: "error",
                         message: res.data.error,

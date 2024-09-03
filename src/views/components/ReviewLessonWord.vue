@@ -292,6 +292,8 @@ onMounted(() => {
 const getLessonWords = () => {
   loading.value = true
   functionTextBox.value = ""
+  currSelectedRow.value = null
+  console.log(currSelectedRow.value)
   ajax
     .get<AnkiResponseModel>(
       `/lesson-words?vid=${props.videoId}`
@@ -618,7 +620,7 @@ const deleteWord = (noteId: number) => {
         `note?noteId=${noteId}&audioFileName=${currSelectedRow.value?.AudioFileName}&imageFileName=${currSelectedRow.value?.ImageFileName}`
       )
         .then((res) => {
-          if (res.data.error != null) {
+          if (res.data.error) {
             ElMessage({
               type: "error",
               message: res.data.error,
