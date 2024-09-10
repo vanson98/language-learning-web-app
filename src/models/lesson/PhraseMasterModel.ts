@@ -4,5 +4,7 @@ export default interface PhraseMasterModel {
     Meaning: string,
     VietnameseMeaning: string | null,
     Status: number,
-    Example: string
+    Example: string,
+    Tags: string[] | null,
+    Checked: boolean,
 }

@@ -19,9 +19,7 @@
             </div>
           </el-col>
           <el-col :span="3">
-            <el-select 
-              v-model="voiceType"
-            >
+            <el-select v-model="voiceType">
               <el-option :key="0" :value="'Context'" :label="'Context Voice'"></el-option>
               <el-option :key="1" :value="'Word'" :label="'Word Voice'"></el-option>
             </el-select>
@@ -29,19 +27,12 @@
           <!-- <el-col :span="3">
             <el-button type="primary" @click="openSearchPhraseDialog">Search Phrase</el-button>
           </el-col> -->
-       
+
           <el-col :span="7">
             <div class="d-flex justify-content-end w-100">
-              <el-upload 
-                :auto-upload="false" 
-                :action="`${SERVER_BASE_URL}/upload-lre-file`" 
-                :multiple="false"
-                :name="'lre_file'" 
-                :method="'post'" 
-                ref="uploadRef" 
-                accept=".zip,.rar,.7zip" 
-                :on-success="onUploadLreFileSuccess"
-                :on-error="onUploadLreFileError">
+              <el-upload :auto-upload="false" :action="`${SERVER_BASE_URL}/upload-lre-file`" :multiple="false"
+                :name="'lre_file'" :method="'post'" ref="uploadRef" accept=".zip,.rar,.7zip"
+                :on-success="onUploadLreFileSuccess" :on-error="onUploadLreFileError">
                 <template #trigger>
                   <el-button type="primary">Select File</el-button>
                 </template>
@@ -54,17 +45,13 @@
         </el-row>
       </el-header>
       <el-main style="height: 100%; padding-top: 8px;">
-        <ReviewLessonWord v-if="selectNoteType == 0" 
-          :video-id="videoId" 
-          :auto-play-audio="autoPlayAudio" 
-          :auto-hide-updated-note="autoHideUpdatedNote" 
-          :voice-type="voiceType">
+        <ReviewLessonWord v-if="selectNoteType == 0" :video-id="videoId" :auto-play-audio="autoPlayAudio"
+          :auto-hide-updated-note="autoHideUpdatedNote" :voice-type="voiceType">
         </ReviewLessonWord>
-        <ReviewLessonPhrase v-if="selectNoteType == 1" 
-          :video-id="videoId" 
-          :auto-play-audio="autoPlayAudio"
+        <ReviewLessonPhrase v-if="selectNoteType == 1" :video-id="videoId" :auto-play-audio="autoPlayAudio"
           :auto-hide-updated-note="autoHideUpdatedNote">
         </ReviewLessonPhrase>
+       
       </el-main>
     </el-container>
   </div>
@@ -81,8 +68,8 @@ import ReviewLessonWord from './components/ReviewLessonWord.vue'
 import ReviewLessonPhrase from './components/ReviewLessonPhrase.vue';
 import {SERVER_BASE_URL} from '@/libs/url';
 
-const videoId = ref<string>("70274003")
-const selectNoteType = ref<number>(0)
+const videoId = ref<string>("70274007")
+const selectNoteType = ref<number>(1)
 const autoPlayAudio = ref(true)
 const autoHideUpdatedNote = ref(true)
 const voiceType = ref("Word")

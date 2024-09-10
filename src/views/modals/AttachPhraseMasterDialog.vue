@@ -10,9 +10,9 @@
                     @keydown="handleKeyDownOnSearchPhraseInput" placeholder="Phrase Text" :tabindex="0">
                 </el-input>
                 <label class="mt-2">Total anki search result: {{ totalAnkiSearchResult }}</label>
-                <el-select-v2 v-model:model-value="selectedPhraseId" style="width: 100%;" remote :remote-method="searchNote"
+                <el-select-v2 v-model="selectedPhraseId" style="width: 100%;" remote :remote-method="searchNote"
                     :options="phraseOptions" :loading="loading" placeholder="Please enter phrase name" filterable
-                    :tabindex="1" value-key="value">
+                    value-key="value" >
                     <template #default="{ item }">
                         <b v-html="item.label" class="me-2"></b>
                         <span>&#8594; </span>
@@ -27,12 +27,7 @@
             </div>
             <div class="mt-2">
                 <lable>Example</lable>
-                <QuillEditor v-model:content="examplePhrase" toolbar="#context-toolbar2" content-type="html">
-                    <template #toolbar>
-                        <div id="context-toolbar2" class="my-toolbar">
-                        </div>
-                    </template>
-                </QuillEditor>
+                <el-input v-model="examplePhrase" type="textarea" autosize></el-input>
             </div>
         </div>
         <template #footer>
@@ -57,11 +52,11 @@ const props = defineProps<{
     visible: boolean,
     searchText: string | null | undefined,
     currentPhraseId: number | null | undefined,
-    currentMasterPhraseIds: number[] | null | undefined
+    currentMasterPhraseIds: string | null | undefined
 }>()
 const emit = defineEmits(["close"])
 
-const selectedPhraseId = ref()
+const selectedPhraseId = ref<number>()
 const loading = ref(false);
 const phraseOptions = ref<OptionType[]>([]);
 const searchPhraseText = ref("")
@@ -92,7 +87,7 @@ const searchNote = (query: string) => {
                 phraseOptions.value.push({
                     label: element.fields.Front.value,
                     options: element.fields.Meaning.value,
-                    value: element.noteId
+                    value: element.noteId as number
                 })
             });
         }
@@ -103,54 +98,45 @@ const searchNote = (query: string) => {
 
 const confirm = () => {
     if (selectedPhraseId.value != null) {
-        addMoreParentPhrase(selectedPhraseId.value)
+        updateParentPhraseIds(selectedPhraseId.value)
     } else {
-        addNewPhraseToAnki()
+        addNewMasterPhraseToAnki()
     }
 }
 
-const addMoreParentPhrase = (phraseId: number) => {
-    if (props.currentMasterPhraseIds) {
-        var parentPhraseIds = [...props.currentMasterPhraseIds, phraseId].join(",")
-        var requestData = JSON.stringify({
-            NoteId: phraseId,
-            PhraseIds: parentPhraseIds
-        })
-        ajax.put<AnkiResponseModel>("/parent-phrase",requestData)
-            .then(res => {
-                if (res.status == 200 && res.data.error == null) {
-                    closeDialog(phraseId)
-                    ElMessage({
-                        message: "Add parent phrase success",
-                        type: 'success',
-                    })
-                } else {
-                    ElMessage({
-                        message: "Add parent phrase error: " + res.data.error,
-                        type: 'error',
-                    })
-                }
-            })
-            .catch(res => {
+const updateParentPhraseIds = (parentPhraseId: number) => {
+    var parentPhraseIdString = parentPhraseId.toString()
+    if (props.currentMasterPhraseIds?.trim()) {
+        parentPhraseIdString = props.currentMasterPhraseIds + "," + parentPhraseId
+    }
+    var requestData = JSON.stringify({
+        NoteId: props.currentPhraseId,
+        PhraseIds: parentPhraseIdString
+    })
+    ajax.put<AnkiResponseModel>("/parent-phrase", requestData)
+        .then(res => {
+            if (!res.data.error) {
+                closeDialog(parentPhraseId)
                 ElMessage({
-                    message: "Add parent phrase error: " + res.message,
+                    message: "Binding parent phrase success",
+                    type: 'success',
+                })
+            } else {
+                ElMessage({
+                    message: "Binding parent phrase error: " + res.data.error,
                     type: 'error',
                 })
+            }
+        })
+        .catch(res => {
+            ElMessage({
+                message: "Add parent phrase error: " + res.message,
+                type: 'error',
             })
-
-    }
+        })
 }
 
-const handleKeyDownOnSearchPhraseInput = (event: Event) : any=> {
-    if(event instanceof KeyboardEvent && event.ctrlKey && event.key === 'g'){
-        var searchString = searchPhraseText.value.split(" ").join("+")
-        var url = `https://www.google.com/search?q=${searchString}`
-        window.open(url, "_blank", "height=700,width=800,left=10,top=10,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no,status=yes")
-        event.preventDefault()     
-    }
-}
-
-const addNewPhraseToAnki = () => {
+const addNewMasterPhraseToAnki = () => {
     if (searchPhraseText.value.trim() != "") {
         ajax.post<AnkiResponseModel>("/phrase-master", JSON.stringify({
             Front: searchPhraseText.value,
@@ -163,7 +149,7 @@ const addNewPhraseToAnki = () => {
                     type: 'error',
                 })
             } else {
-                addMoreParentPhrase(res.data.result as number)
+                updateParentPhraseIds(res.data.result as number)
             }
         }).catch(res => {
             console.log(res)
@@ -172,8 +158,18 @@ const addNewPhraseToAnki = () => {
 
 }
 
-const closeDialog = (newParentPhraseId: number | null) => {
-    emit("close", newParentPhraseId)
+const handleKeyDownOnSearchPhraseInput = (event: Event) : any=> {
+    if(event instanceof KeyboardEvent && event.ctrlKey && event.key === 'g'){
+        var searchString = searchPhraseText.value.split(" ").join("+")
+        var url = `https://www.google.com/search?q=${searchString}`
+        window.open(url, "_blank", "height=700,width=800,left=10,top=10,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no,status=yes")
+        event.preventDefault()     
+    }
+}
+
+
+const closeDialog = (parentPhraseId: number | null) => {
+    emit("close", parentPhraseId)
 }
 
 </script>

@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router"
 import Home from "../views/Home.vue"
 import PhraseManager from "@/views/PhraseManager.vue"
-import WordManager from "@/views/WordManager.vue"
 
 
 const routes: Array<RouteRecordRaw> = [
@@ -22,10 +21,6 @@ const routes: Array<RouteRecordRaw> = [
         path: "/phrase-manager",
         name: "phrase-manager",
         component: PhraseManager,
-    },
-    {
-        path: "/word-manager",
-        component: WordManager
     }
 ]
 
