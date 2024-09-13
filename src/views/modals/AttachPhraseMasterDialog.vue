@@ -141,7 +141,8 @@ const addNewMasterPhraseToAnki = () => {
         ajax.post<AnkiResponseModel>("/phrase-master", JSON.stringify({
             Front: searchPhraseText.value,
             Meaning: googlePhraseMeaning.value,
-            Example: examplePhrase.value
+            Example: examplePhrase.value,
+            Status: "1"
         })).then(res => {
             if (res.data.error) {
                 ElMessage({
