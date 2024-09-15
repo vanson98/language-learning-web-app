@@ -1,12 +1,12 @@
 <template>
     <el-row style="height: 5%;">
         <el-col :span="4">
-            <el-input v-model="functionTextBox" placeholder="bl: " @keyup.enter="filterPhrases"></el-input>
+            <el-input v-model="functionTextBox" placeholder="bl: " @keyup.enter="()=>phraseDataControl(false)"></el-input>
         </el-col>
         <el-col :span="4">
             <div class="d-flex">
                 <div class="ms-1 me-1">
-                    <el-button @click="getPhrasePairs" type="primary">Load Data</el-button>
+                    <el-button @click="phraseDataControl(true)" type="primary">Load Data</el-button>
                 </div>
 
                 <ElDropdown>
@@ -27,7 +27,7 @@
         <el-col :span="12">
             <div class="phrase-status-ctn">
                 <span>Total Phrase: {{ totalPhrase }} </span>
-                <span>Filter Phrase: {{ filterValue }} </span>
+                <span>Filter Phrase: {{ filterAmount }} </span>
                 <span>Updated Notes: {{ totalUpdatedNote }}</span>
             </div>
         </el-col>
@@ -206,11 +206,7 @@ const props = defineProps<{
 const autoHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
 
 watch(autoHideUpdatedNoteProp, (newvalue, oldVaue) => {
-    if(newvalue){
-        phrasePairs.value = rootData.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
-    }else{
-        phrasePairs.value = rootData
-    }
+    phraseDataControl(false)
 })
 
 
@@ -221,7 +217,7 @@ let updatedPhraseMtIds: number[] = [];
 const phrasePairs = ref<PhrasePairModel[]>([]);
 
 const totalPhrase = ref<number>(0)
-const filterValue = ref<number>(0)
+const filterAmount = ref<number>(0)
 const totalUpdatedNote = ref<number>(0)
 const totalMasterAttach = ref<number>(0)
 
@@ -282,23 +278,14 @@ const editPhraseModel = ref<EditPhraseModel>({
 
 // ====================================== DATA HANDLE =========================================
 onMounted(() => {
-    getPhrasePairs()
     getUpdatedNoteIds()
+    phraseDataControl(true)
 })
 
-const getPhrasePairs = () =>{
-    functionTextBox.value = ""
-    loading.value = true
-    currSelectedRow.value = null
-    if(props.videoId){
-        getLessonPhrasePairs()
-    }else{
-        getAllPhrasePairs()
-    }
-}
 
 // get lesson phrases
 const getLessonPhrasePairs = () => {
+    loading.value = true
     ajax.get(`/lesson-phrases?vid=${props.videoId}`)
         .then(res => {
             loading.value = false
@@ -335,8 +322,8 @@ const getLessonPhrasePairs = () => {
                 rootData.push(phrasePair)
             })
             totalPhrase.value = rootData.length
-            functionTextBox.value = ""
             phrasePairs.value = rootData
+            sortAndCheckUpdatedHiding()
         })
         .catch(res => {
             ElMessage({
@@ -347,67 +334,8 @@ const getLessonPhrasePairs = () => {
         })
 }
 
-// get all phrase pair and search
-const getAllPhrasePairs = () =>{
-    //ajax.get<AnkiResponseModel>(`/search-phrase?search=${searchText}`)
-    ajax.get<AnkiResponseModel>(`/master-phrases`)
-        .then(res => {
-            loading.value = false
-            if(res.data.error){
-                ElMessage({
-                    message: res.data.error,
-                    type: 'error',
-                })
-            }
-            rootData = []
-            res.data.result.forEach((item: any,index: number) => {
-                var phrasePair: PhrasePairModel = {
-                    PhraseMaster: {
-                        NoteId: item.noteId,
-                        Front:  item["fields"]["Front"].value.replace(/<\/?[^>]+(>|$)/g, '').replace(/&nbsp;/g, ' '),
-                        Example: item["fields"]["Example"].value.replace(/<\/?[^>]+(>|$)/g, '').replace(/&nbsp;/g, ' '),
-                        Meaning: item["fields"]["Meaning"].value.replace(/<\/?[^>]+(>|$)/g, '').replace(/&nbsp;/g, ' '),
-                        Status: item["fields"]["Status"].value == "" ? 0 : +item["fields"]["Status"].value,
-                        VietnameseMeaning: item["fields"]["Vietnamese Meaning"].value,
-                        Tags: null,
-                        Checked: false
-                    },
-                    PhraseNotes: []
-                }
-                rootData.push(phrasePair)
-            })
-            totalPhrase.value = rootData.length
-            filterValue.value = 0
-            
-
-            if(props.autoHideUpdatedNote){
-                phrasePairs.value = rootData.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
-            }else{
-                phrasePairs.value = rootData
-            }
-
-            sortWordByLemmaAsc()
-            
-        })
-        .catch(res => {
-            ElMessage({
-                message: res.message,
-                type: 'error',
-            })
-            loading.value = false
-        })
-}
-
+// searhc phrase master (incase - none video id)
 const searchPhraseMaster = (searchText: string) =>{
-    phrasePairs.value = []
-    if(props.videoId.trim()){
-        phrasePairs.value = rootData.filter(pp=>pp.PhraseMaster.Front.includes(searchText))
-        if(props.autoHideUpdatedNote){
-            phrasePairs.value = phrasePairs.value.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
-        }
-        filterValue.value = phrasePairs.value.length
-        return
-    }
     ajax.get<AnkiResponseModel>(`/search-phrase?search=${searchText}`)
         .then(res => {
             loading.value = false
@@ -434,14 +362,10 @@ const searchPhraseMaster = (searchText: string) =>{
                 }
                 rootData.push(phrasePair)
             })
+            totalPhrase.value = rootData.length
             phrasePairs.value = rootData
-
-            if(props.autoHideUpdatedNote){
-                phrasePairs.value = rootData.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
-            }
-
-            sortWordByLemmaAsc()
-            filterValue.value = phrasePairs.value.length
+            sortAndCheckUpdatedHiding()
+            filterAmount.value = phrasePairs.value.length
         })
         .catch(res => {
             ElMessage({
@@ -451,7 +375,6 @@ const searchPhraseMaster = (searchText: string) =>{
             loading.value = false
         })
     
-    sortWordByLemmaAsc()
 }
 
 // get single phrase master
@@ -486,7 +409,7 @@ const getSinglePhraseMasterAndBinding = (phraseMasterId: number) => {
                 }
                 newPhrasePair.PhraseNotes.push(currPhraseAttaching!)
                 rootData.push(newPhrasePair)
-                filterPhrases()
+                //phraseDataControl()
             }
             
         })
@@ -613,6 +536,7 @@ const updateMtPhrase = (phraseMt: PhraseMasterModel, fromRange: boolean)=>{
             phraseMt.Checked = false
         }
         recordUpdatedPhrase(phraseMt)
+        sortAndCheckUpdatedHiding()
     }).catch(res => {
         ElMessage({
             type: "error",
@@ -682,7 +606,7 @@ const deletePhrase = (phrase: PhraseNoteModel) => {
                 })
                 if(currSelectedRow.value!.PhraseMaster.NoteId < 0){
                     rootData = rootData.filter(pp => pp.PhraseMaster.NoteId != currSelectedRow.value?.PhraseMaster.NoteId)
-                    filterPhrases()
+                    //phraseDataControl()
                 }else if(currSelectedRow.value){
                     currSelectedRow.value.PhraseNotes = currSelectedRow.value?.PhraseNotes.filter(p => p.NoteId != phrase.NoteId)
                 }
@@ -722,31 +646,37 @@ const unbindPhraseMaster = (phraseNote: PhraseNoteModel) =>{
 }
 // ====================================== TABLE HANDLE =========================================
 
-const filterPhrases = () => {
-    var functionTextBoxValue = functionTextBox.value
-    if (functionTextBoxValue.includes("bl:")) {
-        var newStatus = parseInt(functionTextBox.value.substring(3))
-        setRangPhraseMasterStatus(newStatus)
-    } else if (functionTextBoxValue.includes("st:")) {
-        var status = parseInt(functionTextBox.value.substring(3))
-        phrasePairs.value = rootData.filter(p => p.PhraseMaster?.Status == status)
-        if(props.autoHideUpdatedNote){
-            phrasePairs.value = phrasePairs.value.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
-        }
-        filterValue.value = phrasePairs.value.length
-    } else if (functionTextBoxValue.trim()){
-        searchPhraseMaster(functionTextBox.value)
-    } else {
-        if(props.videoId){
-            phrasePairs.value = rootData
-            if(props.autoHideUpdatedNote){
-                phrasePairs.value = rootData.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
-            }
-        sortWordByLemmaAsc()
+const phraseDataControl = (fromButton: boolean) => {
+    var videoId = props.videoId.trim()
+    var textBoxValue = functionTextBox.value.trim()
+    filterAmount.value = 0
+    if(fromButton){
+        functionTextBox.value = ""
+        if(videoId){
+            // get all phrase pairs of lesson
+            getLessonPhrasePairs()
         }else{
-            getAllPhrasePairs()
+            // get all phrase masters
+            searchPhraseMaster("")
         }
-        
+    } else if(!textBoxValue && !videoId){
+        searchPhraseMaster("")
+    } else {
+        if(textBoxValue.includes("bl:")){
+            var newStatus = parseInt(textBoxValue.substring(3))
+            setRangPhraseMasterStatus(newStatus)
+            
+        }else if(textBoxValue.includes("st:")){
+            var status = parseInt(functionTextBox.value.substring(3))
+            phrasePairs.value = rootData.filter(p => p.PhraseMaster?.Status == status)
+            filterAmount.value = phrasePairs.value.length
+            sortAndCheckUpdatedHiding()
+        }else if(videoId){
+            phrasePairs.value = rootData.filter(p => p.PhraseMaster.Front.includes(textBoxValue))
+            sortAndCheckUpdatedHiding()
+        } else {
+            searchPhraseMaster(textBoxValue)
+        }
     }
 }
 
@@ -872,7 +802,7 @@ const selectTopTenPhraseNote = () => {
       })
 }
 
-const sortWordByLemmaAsc = () => {
+const sortAndCheckUpdatedHiding = () => {
   phrasePairs.value.sort((a, b) => {
     if(a.PhraseMaster!.NoteId < 0)
         return 1;
@@ -882,6 +812,10 @@ const sortWordByLemmaAsc = () => {
         return a.PhraseMaster!.Front.localeCompare(b.PhraseMaster!.Front)
     }
   });
+  if(props.autoHideUpdatedNote){
+    //phrasePairs.value = rootData.filter(pp=>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
+    phrasePairs.value = phrasePairs.value.filter(pp=>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
+  }
 }
 
 // ========================== DIALOG HANDLE ==========================
