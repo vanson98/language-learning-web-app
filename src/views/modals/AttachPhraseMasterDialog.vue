@@ -75,11 +75,14 @@ const onDialogOpen = () => {
 
 }
 
-const searchNote = (query: string) => {
+const searchNote = (searchtext: string) => {
+    if(!searchtext){
+        return
+    }
     selectedPhraseId.value = undefined;
     loading.value = true;
     phraseOptions.value = []
-    ajax.get("/search-phrase?search=" + query).then((res) => {
+    ajax.get("/search-phrase?search=" + searchtext).then((res) => {
         loading.value = false
         if (Array.isArray(res.data.result)) {
             totalAnkiSearchResult.value = res.data.result.length
@@ -156,7 +159,6 @@ const addNewMasterPhraseToAnki = () => {
             console.log(res)
         })
     }
-
 }
 
 const handleKeyDownOnSearchPhraseInput = (event: Event) : any=> {

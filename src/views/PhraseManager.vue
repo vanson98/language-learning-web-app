@@ -40,10 +40,8 @@
             </div>
           </el-card>
           </div>
-          
         </el-col>
       </el-row>
-
     </el-main>
   </el-container>
 </template>
@@ -71,7 +69,9 @@ const phrases = ref<NoteInfo[]>([])
 
 // search phrases by key word
 const searchNote = (keyword: string) => {
-  selectedPhraseId.value = undefined;
+  if(!keyword){
+    return
+  }
   loading.value = true;
   searchNoteOptions.value = []
   phrases.value = []

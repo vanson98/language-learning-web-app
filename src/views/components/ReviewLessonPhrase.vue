@@ -27,8 +27,8 @@
         <el-col :span="12">
             <div class="phrase-status-ctn">
                 <span>Total Phrase: {{ totalPhrase }} </span>
+                <span>Filter Phrase: {{ filterValue }} </span>
                 <span>Updated Notes: {{ totalUpdatedNote }}</span>
-                <span>Attach Phrase Master: {{ totalMasterAttach }}</span>
             </div>
         </el-col>
     </el-row>
@@ -206,8 +206,11 @@ const props = defineProps<{
 const autoHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
 
 watch(autoHideUpdatedNoteProp, (newvalue, oldVaue) => {
-    functionTextBox.value = ""
-    filterPhrases()
+    if(newvalue){
+        phrasePairs.value = rootData.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
+    }else{
+        phrasePairs.value = rootData
+    }
 })
 
 
@@ -218,6 +221,7 @@ let updatedPhraseMtIds: number[] = [];
 const phrasePairs = ref<PhrasePairModel[]>([]);
 
 const totalPhrase = ref<number>(0)
+const filterValue = ref<number>(0)
 const totalUpdatedNote = ref<number>(0)
 const totalMasterAttach = ref<number>(0)
 
@@ -265,12 +269,6 @@ let currAudio: HTMLAudioElement
 const selectionText = ref<string | undefined>("")
 let currPhraseAttaching : PhraseNoteModel | null = null
 
-watch(currSelectedRow, (newValue, oldValue) => {
-    if (newValue) {
-        //getParentPhrase(newValue)
-    }
-})
-
 // ====================== Dialog Variable ==================
 
 const attachPhraseMasterDialogVisible = ref<boolean>(false)
@@ -301,7 +299,6 @@ const getPhrasePairs = () =>{
 
 // get lesson phrases
 const getLessonPhrasePairs = () => {
-    
     ajax.get(`/lesson-phrases?vid=${props.videoId}`)
         .then(res => {
             loading.value = false
@@ -338,9 +335,8 @@ const getLessonPhrasePairs = () => {
                 rootData.push(phrasePair)
             })
             totalPhrase.value = rootData.length
-            //totalMasterAttach.value = rootData.filter(p=>p.PhraseMaster.NoteId < 0).length
-            filterPhrases()
-
+            functionTextBox.value = ""
+            phrasePairs.value = rootData
         })
         .catch(res => {
             ElMessage({
@@ -351,8 +347,9 @@ const getLessonPhrasePairs = () => {
         })
 }
 
-// get all phrase pair
+// get all phrase pair and search
 const getAllPhrasePairs = () =>{
+    //ajax.get<AnkiResponseModel>(`/search-phrase?search=${searchText}`)
     ajax.get<AnkiResponseModel>(`/master-phrases`)
         .then(res => {
             loading.value = false
@@ -362,15 +359,14 @@ const getAllPhrasePairs = () =>{
                     type: 'error',
                 })
             }
-
             rootData = []
             res.data.result.forEach((item: any,index: number) => {
                 var phrasePair: PhrasePairModel = {
                     PhraseMaster: {
                         NoteId: item.noteId,
-                        Front:  item["fields"]["Front"].value,
-                        Example: item["fields"]["Example"].value,
-                        Meaning: item["fields"]["Meaning"].value,
+                        Front:  item["fields"]["Front"].value.replace(/<\/?[^>]+(>|$)/g, '').replace(/&nbsp;/g, ' '),
+                        Example: item["fields"]["Example"].value.replace(/<\/?[^>]+(>|$)/g, '').replace(/&nbsp;/g, ' '),
+                        Meaning: item["fields"]["Meaning"].value.replace(/<\/?[^>]+(>|$)/g, '').replace(/&nbsp;/g, ' '),
                         Status: item["fields"]["Status"].value == "" ? 0 : +item["fields"]["Status"].value,
                         VietnameseMeaning: item["fields"]["Vietnamese Meaning"].value,
                         Tags: null,
@@ -381,9 +377,17 @@ const getAllPhrasePairs = () =>{
                 rootData.push(phrasePair)
             })
             totalPhrase.value = rootData.length
-            //totalMasterAttach.value = rootData.filter(p=>p.PhraseMaster.NoteId < 0).length
-            filterPhrases()
+            filterValue.value = 0
+            
 
+            if(props.autoHideUpdatedNote){
+                phrasePairs.value = rootData.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
+            }else{
+                phrasePairs.value = rootData
+            }
+
+            sortWordByLemmaAsc()
+            
         })
         .catch(res => {
             ElMessage({
@@ -392,6 +396,62 @@ const getAllPhrasePairs = () =>{
             })
             loading.value = false
         })
+}
+
+const searchPhraseMaster = (searchText: string) =>{
+    phrasePairs.value = []
+    if(props.videoId.trim()){
+        phrasePairs.value = rootData.filter(pp=>pp.PhraseMaster.Front.includes(searchText))
+        if(props.autoHideUpdatedNote){
+            phrasePairs.value = phrasePairs.value.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
+        }
+        filterValue.value = phrasePairs.value.length
+        return
+    }
+    ajax.get<AnkiResponseModel>(`/search-phrase?search=${searchText}`)
+        .then(res => {
+            loading.value = false
+            if(res.data.error){
+                ElMessage({
+                    message: res.data.error,
+                    type: 'error',
+                })
+            }
+            rootData = []
+            res.data.result.forEach((item: any,index: number) => {
+                var phrasePair: PhrasePairModel = {
+                    PhraseMaster: {
+                        NoteId: item.noteId,
+                        Front:  item["fields"]["Front"].value.replace(/<\/?[^>]+(>|$)/g, '').replace(/&nbsp;/g, ' '),
+                        Example: item["fields"]["Example"].value.replace(/<\/?[^>]+(>|$)/g, '').replace(/&nbsp;/g, ' '),
+                        Meaning: item["fields"]["Meaning"].value.replace(/<\/?[^>]+(>|$)/g, '').replace(/&nbsp;/g, ' '),
+                        Status: item["fields"]["Status"].value == "" ? 0 : +item["fields"]["Status"].value,
+                        VietnameseMeaning: item["fields"]["Vietnamese Meaning"].value,
+                        Tags: null,
+                        Checked: false
+                    },
+                    PhraseNotes: []
+                }
+                rootData.push(phrasePair)
+            })
+            phrasePairs.value = rootData
+
+            if(props.autoHideUpdatedNote){
+                phrasePairs.value = rootData.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
+            }
+
+            sortWordByLemmaAsc()
+            filterValue.value = phrasePairs.value.length
+        })
+        .catch(res => {
+            ElMessage({
+                message: res.message,
+                type: 'error',
+            })
+            loading.value = false
+        })
+    
+    sortWordByLemmaAsc()
 }
 
 // get single phrase master
@@ -591,7 +651,9 @@ const setRangPhraseMasterStatus = (newStatus: number) => {
         return
     }
     phrasePairs.value.forEach((pp) => {
-        updatePhraseMasterStatus(pp.PhraseMaster, newStatus)
+        if(pp.PhraseMaster.Checked){
+            updatePhraseMasterStatus(pp.PhraseMaster, newStatus)
+        }
     })
 }
 
@@ -661,21 +723,31 @@ const unbindPhraseMaster = (phraseNote: PhraseNoteModel) =>{
 // ====================================== TABLE HANDLE =========================================
 
 const filterPhrases = () => {
-    if (!functionTextBox.value) {
-        phrasePairs.value = rootData
-    } else if (functionTextBox.value.includes("bl:")) {
+    var functionTextBoxValue = functionTextBox.value
+    if (functionTextBoxValue.includes("bl:")) {
         var newStatus = parseInt(functionTextBox.value.substring(3))
         setRangPhraseMasterStatus(newStatus)
-    } else if (functionTextBox.value.includes("st:")) {
+    } else if (functionTextBoxValue.includes("st:")) {
         var status = parseInt(functionTextBox.value.substring(3))
         phrasePairs.value = rootData.filter(p => p.PhraseMaster?.Status == status)
+        if(props.autoHideUpdatedNote){
+            phrasePairs.value = phrasePairs.value.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
+        }
+        filterValue.value = phrasePairs.value.length
+    } else if (functionTextBoxValue.trim()){
+        searchPhraseMaster(functionTextBox.value)
     } else {
-        phrasePairs.value = rootData.filter((p) => p.PhraseMaster?.Front.includes(functionTextBox.value))
+        if(props.videoId){
+            phrasePairs.value = rootData
+            if(props.autoHideUpdatedNote){
+                phrasePairs.value = rootData.filter(pp =>!updatedPhraseMtIds.includes(pp.PhraseMaster.NoteId))
+            }
+        sortWordByLemmaAsc()
+        }else{
+            getAllPhrasePairs()
+        }
+        
     }
-    if (props.autoHideUpdatedNote) {
-        phrasePairs.value = phrasePairs.value.filter(p => !updatedPhraseMtIds.includes(p.PhraseMaster.NoteId))
-    }
-    sortWordByLemmaAsc()
 }
 
 const onAllRowSelectionChange = (value: CheckboxValueType) => {
@@ -822,18 +894,18 @@ const openAttachPhraseMasterDialog = (phrase: PhraseNoteModel) =>{
 
 const closeAttachPhraseMasterDialog = (phraseMasterId: number | null) => {
     if (phraseMasterId != null && currPhraseAttaching != null) {
-        var existPhrasePair = phrasePairs.value.find(pp=>pp.PhraseMaster?.NoteId === phraseMasterId)
+        var existPhrasePair = phrasePairs.value.find(pp=>pp.PhraseMaster?.NoteId === phraseMasterId && pp.PhraseMaster.NoteId != currSelectedRow.value!.PhraseMaster.NoteId)
         
         currPhraseAttaching.PhraseMasterIds = currPhraseAttaching.PhraseMasterIds.trim() ?
             `${currPhraseAttaching.PhraseMasterIds},${phraseMasterId}` :
             phraseMasterId.toString()
 
-        if (existPhrasePair && existPhrasePair.PhraseMaster.NoteId != currSelectedRow.value?.PhraseMaster.NoteId) {
+        if (existPhrasePair) {
             if (currSelectedRow.value!.PhraseMaster.NoteId < 0){
                 // in-case phrase master existing 
                 existPhrasePair.PhraseNotes.push(currPhraseAttaching!)
-                rootData = rootData.filter(pp=>pp.PhraseMaster?.NoteId != currSelectedRow.value?.PhraseMaster?.NoteId)
-                filterPhrases()
+                rootData = rootData.filter(pp=>pp.PhraseMaster?.NoteId != currSelectedRow.value!.PhraseMaster.NoteId)
+                phrasePairs.value = rootData
             }else{
                 existPhrasePair.PhraseNotes.push(currPhraseAttaching)
             }
