@@ -68,7 +68,7 @@
               </template>
               <template v-if="column.key === 'status'">
                 <el-radio-group :model-value="rowData.Status" class="ml-4"
-                  @change="(value) => updateWordNote(rowData, false, value as number)" :key="rowData.NoteId">
+                  @change="(value) => updateWordNoteStatus(rowData, value as number)" :key="rowData.NoteId">
                   <el-radio-button :value="1" size="large">New</el-radio-button>
                   <el-radio-button :value="2" size="large">Rec</el-radio-button>
                   <el-radio-button :value="3" size="large">Fam</el-radio-button>
@@ -130,10 +130,7 @@
                 <el-button @click="() => updateWordNote(currSelectedRow, false, currSelectedRow!.Status)"
                   type="default">Update</el-button>
               </div>
-              <div>
-                <el-button @click="() => updateWordNote(currSelectedRow, false, currSelectedRow!.Status + 1)"
-                  type="success">Update +</el-button>
-              </div>
+              
               <div>
                 <el-button @click="highLightWord" type="warning">Highlight</el-button>
               </div>
@@ -428,6 +425,7 @@ const updateWordNote = (wordNote: WordNoteModel | null, formUpdateRange: boolean
     });
 };
 
+
 const analyzeWordStatus = (currentStatus: number, previousStatus: number = 0) => {
   // check increase amount
   if (currentStatus == 1) {
@@ -463,7 +461,7 @@ const levelUpStatus = () => {
   wordNotes.value.forEach((w) => {
     if (w.Checked && w.Status < 5) {
       var newStatus = w.Status + 1;
-      updateWordNote(w, true, newStatus)
+      updateWordNoteStatus(w, newStatus)
     }
   })
 }
@@ -472,7 +470,7 @@ const levelDownStatus = () => {
   wordNotes.value.forEach((w) => {
     if (w.Checked && w.Status > 1) {
       var newStatus = w.Status - 1
-      updateWordNote(w, true, newStatus)
+      updateWordNoteStatus(w, newStatus)
     }
   })
 }
@@ -486,6 +484,13 @@ const updateRangeWord = () => {
 }
 
 const setStatusForWords = (newStatus: number) => {
+  if (newStatus < 0 || newStatus > 5) {
+        ElMessage({
+            type: "error",
+            message: "Status must be in range 1->5!"
+        })
+        return
+    }
   wordNotes.value.forEach((w) => {
     if (w.Checked && w.Status != newStatus) {
       updateWordNoteStatus(w, newStatus)
@@ -717,10 +722,10 @@ window.addEventListener("keydown", (e) => {
       goToPreviousRow()
     }
     if (e.key == "ArrowRight" && currSelectedRow.value != null && currSelectedRow.value.Status < 5) {
-      updateWordNote(currSelectedRow.value, false, currSelectedRow.value.Status + 1)
+      updateWordNoteStatus(currSelectedRow.value, currSelectedRow.value.Status + 1)
     }
     if (e.key == "ArrowLeft" && currSelectedRow.value != null && currSelectedRow.value.Status > 1) {
-      updateWordNote(currSelectedRow.value, false, currSelectedRow.value.Status - 1)
+      updateWordNoteStatus(currSelectedRow.value, currSelectedRow.value.Status - 1)
     }
     if (e.key == "r") {
       playMedia();
