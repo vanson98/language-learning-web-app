@@ -12,10 +12,11 @@
               </el-option>
             </el-select>
           </el-col>
-          <el-col :span="4">
+          <el-col :span="5">
             <div class="checkbox-ctn">
               <el-checkbox v-model="autoPlayAudio" label="Auto Play Audio" size="large"></el-checkbox>
-              <el-checkbox v-model="autoHideUpdatedNote" label="Hide Updated Note" size="large"></el-checkbox>
+              <el-checkbox v-model="hideMeaning" label="Hide Meaning" size="large"></el-checkbox>
+              <el-checkbox v-model="autoHideUpdatedNote" label="Hide Updated" size="large"></el-checkbox>
             </div>
           </el-col>
           <el-col :span="3">
@@ -46,7 +47,7 @@
       </el-header>
       <el-main style="height: 100%; padding-top: 8px;">
         <ReviewLessonWord v-if="selectNoteType == 0" :video-id="videoId" :auto-play-audio="autoPlayAudio"
-          :auto-hide-updated-note="autoHideUpdatedNote" :voice-type="voiceType">
+          :auto-hide-updated-note="autoHideUpdatedNote" :voice-type="voiceType" :hide-meaning="hideMeaning">
         </ReviewLessonWord>
         <ReviewLessonPhrase v-if="selectNoteType == 1" :video-id="videoId" :auto-play-audio="autoPlayAudio"
           :auto-hide-updated-note="autoHideUpdatedNote">
@@ -69,9 +70,10 @@ import ReviewLessonPhrase from './components/ReviewLessonPhrase.vue';
 import {SERVER_BASE_URL} from '@/libs/url';
 
 const videoId = ref<string>("")
-const selectNoteType = ref<number>(1)
+const selectNoteType = ref<number>(0)
 const autoPlayAudio = ref(true)
 const autoHideUpdatedNote = ref(true)
+const hideMeaning = ref(false)
 const voiceType = ref("Word")
 const uploadRef = ref<UploadInstance>()
 const noteTypeOptions = [
@@ -155,6 +157,12 @@ body {
 }
 .checkbox-ctn{
   margin-top: -7px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  /* 3 columns */
+  grid-template-rows: repeat(2, 1fr);
+  /* 2 rows */
+  gap: 10px;
 }
 .checkbox-ctn>label{
   height: 20px !important;

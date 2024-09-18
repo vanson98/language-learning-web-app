@@ -76,6 +76,9 @@
                   <el-radio-button :value="5" size="large">Knw</el-radio-button>
                 </el-radio-group>
               </template>
+              <template v-if="column.key == 'WordDefinition'">
+                <div class="el-table-v2__cell-text" :title="rowData.WordDefinition" :class="{blur: props.hideMeaning}">{{ rowData.WordDefinition }}</div>
+              </template>
             </template>
 
             <template #overlay v-if="loading">
@@ -206,6 +209,7 @@ const props = defineProps<{
   autoPlayAudio: boolean;
   voiceType: string;
   autoHideUpdatedNote: boolean;
+  hideMeaning: boolean;
 }>();
 
 const autoHideUpdatedNoteProp = toRef(props, 'autoHideUpdatedNote');
@@ -884,5 +888,9 @@ const selectTopTenWordNote = () => {
 .tooltip-base-box .box-item {
   width: 110px;
   margin-top: 10px;
+}
+
+.blur {
+  filter: blur(5px);
 }
 </style>
