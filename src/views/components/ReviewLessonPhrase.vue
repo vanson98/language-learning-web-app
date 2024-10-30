@@ -707,9 +707,6 @@ const handleRowClick = (event: any, row: any) => {
 }
 
 const playAudio = (phrase: PhraseNoteModel) => {
-    if (!props.autoPlayAudio) {
-        return
-    }
     var fileName = phrase.AudioFileName
     ajax.get(`/context-voice?fileName=${fileName}`, {
         responseType: 'arraybuffer'
@@ -755,35 +752,39 @@ window.addEventListener('keydown', (e) => {
 });
 
 const goToNextRow = () => {
-    // if (currSelectedRow.value != null) {
-    //     var currentRowIndex = phrasePairs.value.indexOf(currSelectedRow.value);
+    if (currSelectedRow.value != null) {
+        var currentRowIndex = phrasePairs.value.indexOf(currSelectedRow.value);
 
-    //     if (currentRowIndex == phrasePairs.value.length - 1) {
-    //         return;
-    //     }
-    //     var nextRow = phrasePairs.value.at(currentRowIndex + 1)
-    //     if (nextRow) {
-    //         currSelectedRow.value = nextRow
-    //         playAudio()
-    //         typeText.value = null
-    //     }
-    // }
+        if (currentRowIndex == phrasePairs.value.length - 1) {
+            return;
+        }
+        var nextRow = phrasePairs.value.at(currentRowIndex + 1)
+        if (nextRow) {
+            currSelectedRow.value = nextRow
+            if(props.autoPlayAudio){
+                playAudio(currSelectedRow.value.PhraseNotes[0])
+            }
+            typeText.value = null
+        }
+    }
 }
 
 const goToPreviousRow = () => {
-    // if (currSelectedRow.value != null) {
-    //     var currentRowIndex = phrasePairs.value.indexOf(currSelectedRow.value);
+    if (currSelectedRow.value != null) {
+        var currentRowIndex = phrasePairs.value.indexOf(currSelectedRow.value);
 
-    //     if (currentRowIndex == 0) {
-    //         return;
-    //     }
-    //     var nextRow = phrasePairs.value.at(currentRowIndex - 1)
-    //     if (nextRow) {
-    //         currSelectedRow.value = nextRow
-    //         playAudio()
-    //         typeText.value = null
-    //     }
-    // }
+        if (currentRowIndex == 0) {
+            return;
+        }  
+        var nextRow = phrasePairs.value.at(currentRowIndex - 1)
+        if (nextRow) {
+            currSelectedRow.value = nextRow
+            if(props.autoPlayAudio){
+                playAudio(currSelectedRow.value.PhraseNotes[0])
+            }
+            typeText.value = null
+        }
+    }
 }
 
 const highLightWord = (phraseNote: PhraseNoteModel) => {

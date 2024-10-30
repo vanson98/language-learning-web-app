@@ -124,7 +124,7 @@
 
             <div class=" mb-2 d-flex justify-content-between flex-grow-1">
               <div>
-                <el-button @click="() => playAudio('context-voice')" type="primary">Replay Audio</el-button>
+                <el-button @click="() => playAudio('context-voice')" type="primary">Play Audio</el-button>
               </div>
               <div>
                 <el-button @click="() => updateWordNote(currSelectedRow, false, currSelectedRow!.Status)"
@@ -194,7 +194,7 @@ import {
 import { Loading } from '@element-plus/icons-vue'
 import { SERVER_BASE_URL } from "../../libs/url";
 import WordNoteModel from "../../models/lesson/WordNoteModel";
-import { onMounted, ref, toRef, watch } from "vue";
+import { computed, onMounted, ref, toRef, watch } from "vue";
 import { ajax, crawAjax } from "../../libs/ajax";
 import AnkiResponseModel from "../../models/response/AnkiResponseModel";
 import moment from "moment";
@@ -215,6 +215,8 @@ watch(autoHideUpdatedNoteProp, (newvalue, oldVaue) => {
   functionTextBox.value = ""
   filterWords()
 })
+
+
 // =================== Data Variables ===============
 let rootData: WordNoteModel[];
 let updatedNodeIds: number[] = []
@@ -284,6 +286,7 @@ const loading = ref<boolean>(false)
 const currSelectedRow = ref<WordNoteModel | null>(null);
 let currAudio: HTMLAudioElement
 
+const playAudioOfCurrentRow = computed(()=>currSelectedRow.value?.AudioFileName)
 // ====================================== DATA HANDLE ==========================================
 onMounted(() => {
   getLessonWords();
