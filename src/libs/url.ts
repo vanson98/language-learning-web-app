@@ -8,4 +8,9 @@ const SERVER_CRAW_DATA_URL =
   ? "http://localhost:3323"
   : "http://localhost:3324"
 
-export {SERVER_BASE_URL,SERVER_CRAW_DATA_URL};
+const SERVER_STOCK_TRACKER_URL = 
+  process.env.NODE_ENV == "production"
+  ? "http://localhost:5050"
+  : "http://localhost:5051"
+
+export {SERVER_BASE_URL,SERVER_CRAW_DATA_URL, SERVER_STOCK_TRACKER_URL};

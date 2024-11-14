@@ -13,6 +13,10 @@ const crawAjax = axios.create({
   withCredentials: true
 })
 
+const stockAjax = axios.create({
+  baseURL: AppConsts.remoteStockTrackerServerUrl
+})
+
 // ajax.interceptors.response.use(response =>{
 //   return Promise.resolve(response)
 // },error =>{
@@ -37,4 +41,4 @@ const requestNewToken = ()=>{
   })
 }
 
-export { ajax,crawAjax};
+export { ajax,crawAjax, stockAjax};
