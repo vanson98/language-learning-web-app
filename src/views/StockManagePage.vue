@@ -42,6 +42,15 @@
         <span>Tax: +{{ 1000 }}</span>
       </div>
     </div>
+    <div class="flex flex-row">
+      <div>
+        <ElInput type="text" placeholder="Search ..."></ElInput>
+      </div>
+      <div class="flex-grow"></div>
+      <div>
+        <ElButton @click="()=>addNewInvestmentDialogVisible=true">Add New Investment</ElButton>
+      </div>
+    </div>
     <div>
       <ElTable stripe style="width: 100">
         <ElTableColumn prop="ticker" label="Ticker" />
@@ -59,6 +68,7 @@
       </ElTable>
     </div>
   </div>
+  <AddNewInvestmentDialog :visible="addNewInvestmentDialogVisible" @onclose="onAddingInvestmentDialogClose" :account-id="accountInfo.id"/>
 </template>
 
 <script setup lang="ts">
@@ -82,11 +92,22 @@ import {
   ElMessage,
 } from "element-plus";
 import { stockAjax } from "@/libs/ajax";
+import AddNewInvestmentDialog from "./modals/AddNewInvestmentDialog.vue";
+import { Investment } from "@/models/stock/InvestmentModels";
 
 const selectedAccountId = ref<number>();
 const updateAmount = ref<number>();
 const accountList = ref<AccountSelectDto[]>([]);
-const accountInfo = ref<AccountInfoDto | null>(null);
+const accountInfo = ref<AccountInfoDto>({
+  id: 0,
+  balance: 0,
+  channel_name: "",
+  currency: "",
+  deposit: 0,
+  owner: "",
+  withdrawal: 0
+});
+const addNewInvestmentDialogVisible = ref<boolean>(false)
 
 onMounted(() => {
   getAllInvestmentPaging();
@@ -106,6 +127,12 @@ const getAccountInfoById = () => {
   var url = `/account-info/${selectedAccountId.value}`;
   stockAjax.get<AccountInfoDto>(url).then((res) => {
     accountInfo.value = res.data;
+  }).catch(()=>{
+    ElAlert.error({
+      title: "Error",
+      message: "Cannot fetch account information",
+      showClose: true,
+    });
   });
 };
 
@@ -193,6 +220,7 @@ const withdrawMoney = () => {
     });
 };
 
+
 const updateChannel = (actionType: string) => {
   var messageAlert = "";
   if (actionType == "add-money") {
@@ -221,4 +249,11 @@ const updateChannel = (actionType: string) => {
     }
   });
 };
+
+const onAddingInvestmentDialogClose = (investment: Investment | null) =>{
+  addNewInvestmentDialogVisible.value = false
+  if(investment){
+    console.log(investment)
+  }
+}
 </script>
