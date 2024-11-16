@@ -7,6 +7,7 @@ export default interface AddNewInvestmnetModel {
 }
 
 export interface Investment {
+  id: number;
   account_id: number;
   buy_value: number;
   buy_volume: number;
@@ -15,7 +16,6 @@ export interface Investment {
   current_volume: number;
   description: string;
   fee: number;
-  id: number;
   market_price: number;
   sell_value: number;
   sell_volume: number;

@@ -2,7 +2,7 @@
   <div class="m-2">
     <div class="flex">
       <ElSelect class="flex-none" placeholder="Chọn tài khoản" v-model="selectedAccountId" style="width: 100px"
-        @change="getAccountInfoById">
+        @change="onSelectAccountChange">
         <ElOption v-for="account in accountList" :key="account.id" :label="account.channel_name" :value="account.id">
         </ElOption>
       </ElSelect>
@@ -44,7 +44,7 @@
     </div>
     <div class="flex flex-row">
       <div>
-        <ElInput type="text" placeholder="Search ..."></ElInput>
+        <ElInput v-model="searchText" type="text" placeholder="Search ..." @keyup.enter="getAllInvestmentPaging"></ElInput>
       </div>
       <div class="flex-grow"></div>
       <div>
@@ -52,20 +52,24 @@
       </div>
     </div>
     <div>
-      <ElTable stripe style="width: 100">
+      <ElTable stripe style="width: 100" :data="investments">
         <ElTableColumn prop="ticker" label="Ticker" />
-        <ElTableColumn prop="buyValue" label="Buy Value" />
-        <ElTableColumn prop="buyVolume" label="Buy Volume" />
-        <ElTableColumn prop="capitalCost" label="Capital Cost" />
-        <ElTableColumn prop="currentVolume" label="Current Volume" />
-        <ElTableColumn prop="marketPrice" label="Market Price" />
-        <ElTableColumn prop="sellValue" label="Sell Value" />
-        <ElTableColumn prop="sellVolume" label="Sell Volume" />
+        <ElTableColumn prop="buy_value" label="Buy Value" />
+        <ElTableColumn prop="buy_volume" label="Buy Volume" />
+        <ElTableColumn prop="capital_cost" label="Capital Cost" />
+        <ElTableColumn prop="current_volume" label="Current Volume" />
+        <ElTableColumn prop="market_price" label="Market Price" />
+        <ElTableColumn prop="sell_value" label="Sell Value" />
+        <ElTableColumn prop="sell_volume" label="Sell Volume" />
         <ElTableColumn prop="fee" label="Fee"></ElTableColumn>
         <ElTableColumn prop="tax" label="Tax"></ElTableColumn>
         <ElTableColumn prop="status" label="Status" />
         <ElTableColumn label="Action"></ElTableColumn>
       </ElTable>
+      <div class="flex justify-center my-2">
+        <ElPagination background layout="prev, pager, next" :total="totalInvestmentAmount" @change="onInvestmentPageChange" />
+      </div>
+
     </div>
   </div>
   <AddNewInvestmentDialog :visible="addNewInvestmentDialogVisible" @onclose="onAddingInvestmentDialogClose" :account-id="accountInfo.id"/>
@@ -84,19 +88,23 @@ import {
   ElInput,
   ElButton,
   ElMessageBox,
-  ElRow,
-  ElCol,
   ElTable,
   ElTableColumn,
   ElAlert,
   ElMessage,
+  ElPagination,
 } from "element-plus";
 import { stockAjax } from "@/libs/ajax";
 import AddNewInvestmentDialog from "./modals/AddNewInvestmentDialog.vue";
 import { Investment } from "@/models/stock/InvestmentModels";
 
 const selectedAccountId = ref<number>();
+const searchText = ref<string>("");
 const updateAmount = ref<number>();
+
+const totalInvestmentAmount = ref<number>(0);
+let currentInvestmentPage = 1;
+
 const accountList = ref<AccountSelectDto[]>([]);
 const accountInfo = ref<AccountInfoDto>({
   id: 0,
@@ -108,20 +116,32 @@ const accountInfo = ref<AccountInfoDto>({
   withdrawal: 0
 });
 const addNewInvestmentDialogVisible = ref<boolean>(false)
+const investments = ref<Investment[]>([])
 
 onMounted(() => {
-  getAllInvestmentPaging();
+  getAllAccount();
 });
 
-const getAllInvestmentPaging = () => {
+const getAllAccount = () => {
   stockAjax.get<AccountSelectDto[]>("/accounts").then((res) => {
     res.data.forEach((a) => {
       accountList.value.push(a);
     });
     selectedAccountId.value = res.data[0].id;
     getAccountInfoById();
+    getAllInvestmentPaging();
   });
 };
+
+const getAllInvestmentPaging = () =>{
+  var url = `/investments?account_id=${selectedAccountId.value}&search_text=${searchText.value.trim()}&page=${currentInvestmentPage}&page_size=10`
+  stockAjax.get(url).then(res=>{
+    investments.value = res.data.investments
+    totalInvestmentAmount.value = res.data.total_items
+  }).catch(err=>{
+    console.log(err.response.data)
+  })
+}
 
 const getAccountInfoById = () => {
   var url = `/account-info/${selectedAccountId.value}`;
@@ -255,5 +275,15 @@ const onAddingInvestmentDialogClose = (investment: Investment | null) =>{
   if(investment){
     console.log(investment)
   }
+}
+
+const onInvestmentPageChange = (currentPage: number, pageSize: number) =>{
+  currentInvestmentPage = currentPage;
+  getAllInvestmentPaging()
+}
+
+const onSelectAccountChange = ()=>{
+  getAccountInfoById()
+  getAllInvestmentPaging()
 }
 </script>
