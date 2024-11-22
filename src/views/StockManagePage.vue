@@ -52,8 +52,8 @@
       </div>
     </div>
     <div>
-      <ElTable stripe style="width: 100" :data="investments">
-        <ElTableColumn prop="ticker" label="Ticker" />
+      <ElTable stripe style="width: 100" :data="investments" :default-sort="{prop: 'status', order:'descending'}" sor @sort-change="onInvestmentTableSortChange">
+        <ElTableColumn prop="ticker" label="Ticker" sortable="custom" />
         <ElTableColumn prop="buy_value" label="Buy Value" />
         <ElTableColumn prop="buy_volume" label="Buy Volume" />
         <ElTableColumn prop="capital_cost" label="Capital Cost" />
@@ -63,11 +63,11 @@
         <ElTableColumn prop="sell_volume" label="Sell Volume" />
         <ElTableColumn prop="fee" label="Fee"></ElTableColumn>
         <ElTableColumn prop="tax" label="Tax"></ElTableColumn>
-        <ElTableColumn prop="status" label="Status" />
+        <ElTableColumn prop="status" label="Status" sortable="custom" />
         <ElTableColumn label="Action"></ElTableColumn>
       </ElTable>
       <div class="flex justify-center my-2">
-        <ElPagination background layout="prev, pager, next" :total="totalInvestmentAmount" @change="onInvestmentPageChange" />
+        <ElPagination background layout="prev, pager, next" :total="totalInvestmentAmount" :page-size="6" @change="onInvestmentPageChange" />
       </div>
 
     </div>
@@ -104,6 +104,8 @@ const updateAmount = ref<number>();
 
 const totalInvestmentAmount = ref<number>(0);
 let currentInvestmentPage = 1;
+let investmentSortProp = 'status'
+let investmentSortMode = 'descending'
 
 const accountList = ref<AccountSelectDto[]>([]);
 const accountInfo = ref<AccountInfoDto>({
@@ -122,6 +124,12 @@ onMounted(() => {
   getAllAccount();
 });
 
+// ========================================= ACCOUNTS ==================================================
+const onSelectAccountChange = ()=>{
+  getAccountInfoById()
+  getAllInvestmentPaging()
+}
+
 const getAllAccount = () => {
   stockAjax.get<AccountSelectDto[]>("/accounts").then((res) => {
     res.data.forEach((a) => {
@@ -132,16 +140,6 @@ const getAllAccount = () => {
     getAllInvestmentPaging();
   });
 };
-
-const getAllInvestmentPaging = () =>{
-  var url = `/investments?account_id=${selectedAccountId.value}&search_text=${searchText.value.trim()}&page=${currentInvestmentPage}&page_size=10`
-  stockAjax.get(url).then(res=>{
-    investments.value = res.data.investments
-    totalInvestmentAmount.value = res.data.total_items
-  }).catch(err=>{
-    console.log(err.response.data)
-  })
-}
 
 const getAccountInfoById = () => {
   var url = `/account-info/${selectedAccountId.value}`;
@@ -240,6 +238,37 @@ const withdrawMoney = () => {
     });
 };
 
+// ========================================= INVESTMENTS ==================================================
+const onInvestmentPageChange = (currentPage: number, pageSize: number) =>{
+  currentInvestmentPage = currentPage;
+  getAllInvestmentPaging()
+}
+
+const onAddingInvestmentDialogClose = (investment: Investment | null) =>{
+  addNewInvestmentDialogVisible.value = false
+  if(investment){
+    console.log(investment)
+  }
+}
+
+const onInvestmentTableSortChange = (data: {column: any, prop: string, order: any }) =>{
+  investmentSortProp = data.prop
+  investmentSortMode = data.order
+  getAllInvestmentPaging()
+}
+
+const getAllInvestmentPaging = () =>{
+  var url = `/investments?account_id=${selectedAccountId.value}&search_text=${searchText.value.trim()}&order_by=${investmentSortProp}&sort_type=${investmentSortMode}&page=${currentInvestmentPage}&page_size=6`
+  stockAjax.get(url).then(res=>{
+    investments.value = res.data.investments
+    totalInvestmentAmount.value = res.data.total_items
+  }).catch(err=>{
+    console.log(err.response.data)
+  })
+}
+
+// ========================================= TRANSACTIONS ==================================================
+
 
 const updateChannel = (actionType: string) => {
   var messageAlert = "";
@@ -270,20 +299,7 @@ const updateChannel = (actionType: string) => {
   });
 };
 
-const onAddingInvestmentDialogClose = (investment: Investment | null) =>{
-  addNewInvestmentDialogVisible.value = false
-  if(investment){
-    console.log(investment)
-  }
-}
 
-const onInvestmentPageChange = (currentPage: number, pageSize: number) =>{
-  currentInvestmentPage = currentPage;
-  getAllInvestmentPaging()
-}
 
-const onSelectAccountChange = ()=>{
-  getAccountInfoById()
-  getAllInvestmentPaging()
-}
+
 </script>
