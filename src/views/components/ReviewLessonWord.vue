@@ -142,11 +142,22 @@
               style="margin-bottom: 2px">
             </QuillEditor>
           </div>
-          <div class="d-flex justify-content-between">
-            <div>
-              <el-tag v-for="tag in currSelectedRow.Tags">{{ tag }}</el-tag>
+          
+            <div class="flex gap-2">
+              <el-tag v-for="tag in currSelectedRow.Tags" closable @close="handleCloseTag(tag)">{{ tag }}</el-tag>
+              <el-select-v2
+                v-model:model-value="selectedTags"
+                :options="wordTypeTags"
+                allow-create
+                filterable
+                multiple
+                clearable
+                size="small"
+                class="w-40"
+                @keyup.enter="handleSelectTagConfirm"
+                @blur="handleSelectTagConfirm"
+              />
             </div>
-          </div>
           <div class="mt-2">
             <label>Context Translation</label>
             <QuillEditor v-model:content="currSelectedRow.ContextTranslation" toolbar="#context-toolbar2"
@@ -189,7 +200,8 @@ import {
   ElDropdownMenu,
   ElDropdownItem,
   ElIcon,
-  ElTooltip
+  ElTooltip,
+  ElSelectV2
 } from "element-plus";
 import { Loading } from '@element-plus/icons-vue'
 import { SERVER_BASE_URL } from "../../libs/url";
@@ -231,7 +243,26 @@ const familiarWordAmount = ref<number>(0)
 const learnedWordAmount = ref<number>(0)
 const knownWordAmount = ref<number>(0)
 
-
+const selectedTags = ref<string[]>([])
+const wordTypeTags = [{
+  value: 'Verb',
+  label: 'Verb'
+},{
+  value: 'Noun',
+  label: 'Noun'
+},{
+  value: 'Adj',
+  label: 'Adj'
+},{
+  value: 'Conj',
+  label: 'Conj'
+},{
+  value: 'Pronoun',
+  label: 'Pronoun'
+},{
+  value: 'Aux',
+  label: 'Aux'
+}]
 // =================== Table Variables ====================
 const columns: Column<any>[] = [
   {
@@ -255,13 +286,13 @@ const columns: Column<any>[] = [
     key: "tags",
     dataKey: "tags",
     title: "Tags",
-    width: 100
+    width: 80
   },
   {
     key: "status",
     dataKey: "status",
     title: "Status",
-    width: 350,
+    width: 380,
   },
   {
     key: "WordDefinition",
@@ -846,6 +877,46 @@ const selectTopTenWordNote = () => {
     if (i < 10) {
       w.Checked = true
     }
+  })
+}
+
+const handleSelectTagConfirm = () =>{
+  if(!selectedTags.value.length){
+    return
+  }
+  selectedTags.value.forEach((item)=>{
+    if (!currSelectedRow.value!.Tags.find(t => t==item)){
+      currSelectedRow.value!.Tags.push(item)
+    }
+  })
+  selectedTags.value = []
+  updateNoteTags()
+}
+
+const handleCloseTag = (tag: string) =>{
+  currSelectedRow.value!.Tags = currSelectedRow.value!.Tags.filter(t=>t!= tag)
+  updateNoteTags()
+}
+
+const updateNoteTags = () => {
+  var bodyData = {
+    NoteId: currSelectedRow.value?.NoteId,
+    Tags: currSelectedRow.value?.Tags
+  }
+  ajax.put("/tags",JSON.stringify(bodyData)).then((res)=>{
+    if (res.data.error) {
+        ElMessage({
+          type: "error",
+          message: res.data.error,
+        });
+        return
+      }
+      ElMessage({
+        type: "success",
+        message: `update note tags successful`,
+      });
+  }).catch(res=>{
+    console.log(res)
   })
 }
 
