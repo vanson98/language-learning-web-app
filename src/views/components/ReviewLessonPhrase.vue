@@ -231,7 +231,7 @@ const columns: Column<any>[] = [
         key: "front",
         dataKey: "Front",
         title: "Phrase Master",
-        width: 220
+        width: 280
     },
     // {
     //     key: "tags",
@@ -243,7 +243,7 @@ const columns: Column<any>[] = [
         key: "status",
         dataKey: "Status",
         title: "Status",
-        width: 350,
+        width: 380,
     },
     // {
     //     key: "meaning",
