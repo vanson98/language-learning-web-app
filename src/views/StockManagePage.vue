@@ -69,13 +69,13 @@
         <ElTableColumn prop="status" label="Status" sortable="custom" />
         <ElTableColumn label="Action">
           <template #default="scope">
-            <el-button size="small" type="success" @click="createTransaction(scope.row)">
+            <el-button size="small" type="success" @click="openCreatingTransactionDialog(scope.row, 'BUY')">
               BUY
             </el-button>
             <el-button
               size="small"
               type="danger"
-              @click="createTransaction(scope.row)"
+              @click="openCreatingTransactionDialog(scope.row, 'SELL')"
             >
               SELL
             </el-button>
@@ -83,7 +83,7 @@
         </ElTableColumn>
       </ElTable>
       <div class="flex justify-center my-2">
-        <ElPagination background layout="prev, pager, next" :total="totalInvestmentAmount" :page-size="6" @change="onInvestmentTablePageChange" />
+        <ElPagination background layout="prev, pager, next" :total="totalInvestments" :page-size="6" @change="onInvestmentTablePageChange" />
       </div>
     </div>
     <div>
@@ -110,11 +110,17 @@
         <ElTableColumn prop="return" label="Return" />
       </ElTable>
       <div class="flex justify-center my-2">
-        <ElPagination background layout="prev, pager, next" :total="totalInvestmentAmount" :page-size="10" @change="onTransactionTablePageChange" />
+        <ElPagination background layout="prev, pager, next" :total="totalTransactions" :page-size="10" @change="onTransactionTablePageChange" />
       </div>
     </div>
   </div>
   <AddNewInvestmentDialog :visible="addNewInvestmentDialogVisible" @onclose="onAddingInvestmentDialogClose" :account-id="accountInfo.id"/>
+  <AddNewTransactionDialog 
+  :is-visible="addNewTransactionDialogVisible" 
+  :account-id="selectedAccountId" 
+  :investment-id="currentInvestment?.id" 
+  :trade="tradingMode"
+  @close="onCloseCreatingTransactionDialog"/>
 </template>
 
 <script setup lang="ts">
@@ -140,20 +146,19 @@ import { ajax, stockAjax } from "@/libs/ajax";
 import AddNewInvestmentDialog from "./modals/AddNewInvestmentDialog.vue";
 import { Investment } from "@/models/stock/InvestmentModels";
 import Transaction from "@/models/stock/TransactionModels";
+import AddNewTransactionDialog from "./modals/AddNewTransactionDialog.vue";
 
-const selectedAccountId = ref<number>();
-const searchText = ref<string>("");
-const updateAmount = ref<number>();
+const addNewInvestmentDialogVisible = ref<boolean>(false)
+const addNewTransactionDialogVisible = ref<boolean>(false)
 
-const totalInvestmentAmount = ref<number>(0);
-let currentInvestmentPage = 1;
-let investmentSortProp = 'status'
-let investmentSortMode = 'descending'
+// ========================================= COMPONENT EVENT ==================================================
+onMounted(() => {
+  getAllAccount();
+});
 
-const totalTransactionAmount = ref<number>(0);
-let currentTransactionPage = 1;
-
+// ========================================= ACCOUNTS ==================================================
 const accountList = ref<AccountSelectDto[]>([]);
+const selectedAccountId = ref<number>(0);
 const accountInfo = ref<AccountInfoDto>({
   id: 0,
   balance: 0,
@@ -163,16 +168,9 @@ const accountInfo = ref<AccountInfoDto>({
   owner: "",
   withdrawal: 0
 });
-const addNewInvestmentDialogVisible = ref<boolean>(false)
-const investments = ref<Investment[]>([])
-const currentInvestment = ref<Investment>();
-const transactions = ref<Transaction[]>([])
+const updateAmount = ref<number>();
 
-onMounted(() => {
-  getAllAccount();
-});
 
-// ========================================= ACCOUNTS ==================================================
 const updateChannel = (actionType: string) => {
   var messageAlert = "";
   if (actionType == "add-money") {
@@ -317,6 +315,16 @@ const withdrawMoney = () => {
 };
 
 // ========================================= INVESTMENTS ==================================================
+const searchText = ref<string>("");
+const investments = ref<Investment[]>([])
+const currentInvestment = ref<Investment>();
+// paging properties
+let currentInvestmentPage = 1;
+const totalInvestments = ref<number>(0);
+let investmentSortProp = 'status'
+let investmentSortMode = 'descending'
+
+
 const onInvestmentTablePageChange = (currentPage: number, pageSize: number) =>{
   currentInvestmentPage = currentPage;
   getInvestmentPaging()
@@ -339,7 +347,7 @@ const getInvestmentPaging = () =>{
   var url = `/investments?account_id=${selectedAccountId.value}&search_text=${searchText.value.trim()}&order_by=${investmentSortProp}&sort_type=${investmentSortMode}&page=${currentInvestmentPage}&page_size=6`
   stockAjax.get(url).then(res=>{
     investments.value = res.data.investments
-    totalInvestmentAmount.value = res.data.total_items
+    totalInvestments.value = res.data.total_items
   }).catch(err=>{
     console.log(err.response.data)
   })
@@ -350,6 +358,11 @@ const handleCurrentChange = (val: Investment | undefined) => {
 }
 
 // ========================================= TRANSACTIONS ==================================================
+const transactions = ref<Transaction[]>([])
+// transaction table properties
+const totalTransactions = ref<number>(0);
+let currentTransactionPage = 1;
+const tradingMode = ref<string>("BUY")
 
 const onTransactionTableSortChange = () =>{
 
@@ -368,10 +381,15 @@ const getTransactionPaging = () =>{
   })
 }
 
-const createTransaction = (row: Investment) =>{
-  console.log(row.account_id)
+const openCreatingTransactionDialog = (row: Investment, trade: string) =>{
+  //console.log(row.account_id)
+  addNewTransactionDialogVisible.value = true 
+  tradingMode.value = trade
 }
 
+const onCloseCreatingTransactionDialog = (tx: Transaction) => {
+  addNewTransactionDialogVisible.value = false
+}
 
 
 </script>

@@ -16,3 +16,15 @@ export default interface Transaction {
     return: number,
     status: string
 }
+
+export interface CreateNewTransactionModel{
+    account_id: number,
+    investment_id: number,
+    trading_date: Date,
+    trade: string,
+    match_volume: number | null,
+    match_price: number | null,
+    fee: number | null,
+    tax: number | null,
+    status: string
+}
