@@ -18,9 +18,9 @@
                 <ElInput v-model="model.description" type="textarea" placeholder="Description"></ElInput>
             </div>
         </div>
-        <div>
+        <div class="flex justify-end my-2">
             <ElButton @click="() => closeDialog(null)">Cancel</ElButton>
-            <ElButton @click="save">Add New</ElButton>
+            <ElButton type="primary" @click="save">Add New</ElButton>
         </div>
     </ElDialog>
 </template>
@@ -64,6 +64,11 @@ const save = () =>{
             type: 'success',
             message: 'create new investment successful'
         })
+        model.value.account_id = 0
+        model.value.company_name = ""
+        model.value.description = ""
+        model.value.market_price = 0
+        model.value.ticker = ""
         closeDialog(res.data)
     }).catch((err : AxiosError<STTReponseErrorModel>) => {
         ElMessage({

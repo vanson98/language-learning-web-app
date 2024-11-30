@@ -44,7 +44,7 @@
     </div>
     <div class="flex flex-row">
       <div>
-        <ElInput v-model="searchText" type="text" placeholder="Search ..." @keyup.enter="getAllInvestmentPaging"></ElInput>
+        <ElInput v-model="searchText" type="text" placeholder="Search ..." @keyup.enter="getInvestmentPaging"></ElInput>
       </div>
       <div class="flex-grow"></div>
       <div>
@@ -52,7 +52,10 @@
       </div>
     </div>
     <div>
-      <ElTable stripe style="width: 100" :data="investments" :default-sort="{prop: 'status', order:'descending'}" sor @sort-change="onInvestmentTableSortChange">
+      <ElTable stripe style="width: 100" :data="investments" :default-sort="{prop: 'status', order:'descending'}" 
+        @sort-change="onInvestmentTableSortChange"
+        @current-change="handleCurrentChange"
+        highlight-current-row>
         <ElTableColumn prop="ticker" label="Ticker" sortable="custom" />
         <ElTableColumn prop="buy_value" label="Buy Value" />
         <ElTableColumn prop="buy_volume" label="Buy Volume" />
@@ -64,12 +67,51 @@
         <ElTableColumn prop="fee" label="Fee"></ElTableColumn>
         <ElTableColumn prop="tax" label="Tax"></ElTableColumn>
         <ElTableColumn prop="status" label="Status" sortable="custom" />
-        <ElTableColumn label="Action"></ElTableColumn>
+        <ElTableColumn label="Action">
+          <template #default="scope">
+            <el-button size="small" type="success" @click="createTransaction(scope.row)">
+              BUY
+            </el-button>
+            <el-button
+              size="small"
+              type="danger"
+              @click="createTransaction(scope.row)"
+            >
+              SELL
+            </el-button>
+          </template>
+        </ElTableColumn>
       </ElTable>
       <div class="flex justify-center my-2">
-        <ElPagination background layout="prev, pager, next" :total="totalInvestmentAmount" :page-size="6" @change="onInvestmentPageChange" />
+        <ElPagination background layout="prev, pager, next" :total="totalInvestmentAmount" :page-size="6" @change="onInvestmentTablePageChange" />
       </div>
-
+    </div>
+    <div>
+      <ElTable 
+        stripe 
+        style="width: 100" 
+        :data="transactions" 
+        :default-sort="{prop: 'trading_date', order:'descending'}"  
+        @sort-change="onTransactionTableSortChange"
+        
+        >
+        <ElTableColumn prop="ticker" label="Ticker" sortable="custom" />
+        <ElTableColumn prop="trading_date" label="Tradind Date" sortable="custom" />
+        <ElTableColumn prop="trade" label="Trade" />
+        <ElTableColumn prop="volume" label="Volume" />
+        <ElTableColumn prop="order_price" label="Order Price" />
+        <ElTableColumn prop="match_volume" label="Match Vol" />
+        <ElTableColumn prop="match_price" label="Match Price" />
+        <ElTableColumn prop="match_value" label="Match Value" />
+        <ElTableColumn prop="fee" label="Fee"></ElTableColumn>
+        <ElTableColumn prop="tax" label="Tax"></ElTableColumn>
+        <ElTableColumn prop="cost" label="Cost"/>
+        <ElTableColumn prop="cost_of_goods_sold" label="COGS" />
+        <ElTableColumn prop="return" label="Return" />
+      </ElTable>
+      <div class="flex justify-center my-2">
+        <ElPagination background layout="prev, pager, next" :total="totalInvestmentAmount" :page-size="10" @change="onTransactionTablePageChange" />
+      </div>
     </div>
   </div>
   <AddNewInvestmentDialog :visible="addNewInvestmentDialogVisible" @onclose="onAddingInvestmentDialogClose" :account-id="accountInfo.id"/>
@@ -94,9 +136,10 @@ import {
   ElMessage,
   ElPagination,
 } from "element-plus";
-import { stockAjax } from "@/libs/ajax";
+import { ajax, stockAjax } from "@/libs/ajax";
 import AddNewInvestmentDialog from "./modals/AddNewInvestmentDialog.vue";
 import { Investment } from "@/models/stock/InvestmentModels";
+import Transaction from "@/models/stock/TransactionModels";
 
 const selectedAccountId = ref<number>();
 const searchText = ref<string>("");
@@ -106,6 +149,9 @@ const totalInvestmentAmount = ref<number>(0);
 let currentInvestmentPage = 1;
 let investmentSortProp = 'status'
 let investmentSortMode = 'descending'
+
+const totalTransactionAmount = ref<number>(0);
+let currentTransactionPage = 1;
 
 const accountList = ref<AccountSelectDto[]>([]);
 const accountInfo = ref<AccountInfoDto>({
@@ -119,15 +165,48 @@ const accountInfo = ref<AccountInfoDto>({
 });
 const addNewInvestmentDialogVisible = ref<boolean>(false)
 const investments = ref<Investment[]>([])
+const currentInvestment = ref<Investment>();
+const transactions = ref<Transaction[]>([])
 
 onMounted(() => {
   getAllAccount();
 });
 
 // ========================================= ACCOUNTS ==================================================
+const updateChannel = (actionType: string) => {
+  var messageAlert = "";
+  if (actionType == "add-money") {
+    messageAlert = "Bạn có chắc muốn thêm tiền?";
+  } else if (actionType == "withdraw-money") {
+    messageAlert = "Bạn có chắc muốn rút tiền?";
+  } else if (actionType == "update-buy-fee") {
+    messageAlert = "Bạn có chắc muốn cập nhật phí mua?";
+  } else if (actionType == "update-sell-fee") {
+    messageAlert = "Bạn có chắc muốn cập nhật phí bán?";
+  }
+
+  ElMessageBox.confirm(messageAlert, "Warning", {
+    confirmButtonText: "OK",
+    cancelButtonText: "Cancel",
+    type: "warning",
+  }).then(() => {
+    if (actionType == "add-money") {
+      //addMoneyInput();
+    } else if (actionType == "withdraw-money") {
+      //withdrawMoney();
+    } else if (actionType == "update-buy-fee") {
+      //updateFee("BF");
+    } else if (actionType == "update-sell-fee") {
+      //updateFee("SF");
+    }
+  });
+};
+
+
 const onSelectAccountChange = ()=>{
   getAccountInfoById()
-  getAllInvestmentPaging()
+  getInvestmentPaging()
+  getTransactionPaging();
 }
 
 const getAllAccount = () => {
@@ -136,8 +215,7 @@ const getAllAccount = () => {
       accountList.value.push(a);
     });
     selectedAccountId.value = res.data[0].id;
-    getAccountInfoById();
-    getAllInvestmentPaging();
+    onSelectAccountChange()
   });
 };
 
@@ -239,25 +317,25 @@ const withdrawMoney = () => {
 };
 
 // ========================================= INVESTMENTS ==================================================
-const onInvestmentPageChange = (currentPage: number, pageSize: number) =>{
+const onInvestmentTablePageChange = (currentPage: number, pageSize: number) =>{
   currentInvestmentPage = currentPage;
-  getAllInvestmentPaging()
+  getInvestmentPaging()
 }
 
 const onAddingInvestmentDialogClose = (investment: Investment | null) =>{
   addNewInvestmentDialogVisible.value = false
-  if(investment){
-    console.log(investment)
+  if (investment){
+    investments.value.push(investment)
   }
 }
 
 const onInvestmentTableSortChange = (data: {column: any, prop: string, order: any }) =>{
   investmentSortProp = data.prop
   investmentSortMode = data.order
-  getAllInvestmentPaging()
+  getInvestmentPaging()
 }
 
-const getAllInvestmentPaging = () =>{
+const getInvestmentPaging = () =>{
   var url = `/investments?account_id=${selectedAccountId.value}&search_text=${searchText.value.trim()}&order_by=${investmentSortProp}&sort_type=${investmentSortMode}&page=${currentInvestmentPage}&page_size=6`
   stockAjax.get(url).then(res=>{
     investments.value = res.data.investments
@@ -267,38 +345,32 @@ const getAllInvestmentPaging = () =>{
   })
 }
 
+const handleCurrentChange = (val: Investment | undefined) => {
+  currentInvestment.value = val
+}
+
 // ========================================= TRANSACTIONS ==================================================
 
+const onTransactionTableSortChange = () =>{
 
-const updateChannel = (actionType: string) => {
-  var messageAlert = "";
-  if (actionType == "add-money") {
-    messageAlert = "Bạn có chắc muốn thêm tiền?";
-  } else if (actionType == "withdraw-money") {
-    messageAlert = "Bạn có chắc muốn rút tiền?";
-  } else if (actionType == "update-buy-fee") {
-    messageAlert = "Bạn có chắc muốn cập nhật phí mua?";
-  } else if (actionType == "update-sell-fee") {
-    messageAlert = "Bạn có chắc muốn cập nhật phí bán?";
-  }
+}
 
-  ElMessageBox.confirm(messageAlert, "Warning", {
-    confirmButtonText: "OK",
-    cancelButtonText: "Cancel",
-    type: "warning",
-  }).then(() => {
-    if (actionType == "add-money") {
-      //addMoneyInput();
-    } else if (actionType == "withdraw-money") {
-      //withdrawMoney();
-    } else if (actionType == "update-buy-fee") {
-      //updateFee("BF");
-    } else if (actionType == "update-sell-fee") {
-      //updateFee("SF");
-    }
-  });
-};
+const onTransactionTablePageChange = (page: number) => {
+  currentTransactionPage = page
+  getTransactionPaging()
+}
 
+const getTransactionPaging = () =>{
+  var ticker = currentInvestment.value ? currentInvestment.value.ticker : ""
+  var url = `/transactions?account_id=${selectedAccountId.value}&ticker=${ticker}&page=${currentTransactionPage}&page_size=10`
+  stockAjax.get(url).then(res=>{
+    transactions.value =  res.data.transactions
+  })
+}
+
+const createTransaction = (row: Investment) =>{
+  console.log(row.account_id)
+}
 
 
 
