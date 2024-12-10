@@ -24,7 +24,23 @@ export default interface AccountDto{
     created_at: string
 }
 
+export  interface GetAccountPagingDto{
+    id: number,
+    channel_name: string,
+    owner: string,
+    balance: number,
+    currency: string,
+    deposit: number,
+    withdraw: number
+}
+
 export interface AccountTransferResult{
     account: AccountDto,
     entry: EntryDto
+}
+
+export interface CreateAccountDto{
+    owner: string,
+    channel_name: string,
+    currency: string
 }

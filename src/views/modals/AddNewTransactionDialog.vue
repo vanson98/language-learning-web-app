@@ -1,5 +1,5 @@
 <template>
-    <ElDialog v-bind:model-value="isVisible" title="Create New Transaction" :width="560" @close="onClose">
+    <ElDialog v-bind:model-value="isVisible" title="Create New Transaction" :width="560" @close="() => onClose(null)">
         <div>
             <label>Match volume</label>
             <ElInput v-model="model.match_volume" type="number"></ElInput>
@@ -32,7 +32,7 @@
             </div>
         </div>
         <div class="flex justify-end mt-2">
-            <ElButton @click="onClose">Cancel</ElButton>    
+            <ElButton @click="() => onClose(null)">Cancel</ElButton>    
             <ElButton type="primary" @click="submit">Create</ElButton>
         </div>
        
@@ -41,9 +41,8 @@
 
 <script lang="ts" setup>
 import { stockAjax } from '@/libs/ajax';
-import { Investment } from '@/models/stock/InvestmentModels';
 import Transaction, { CreateNewTransactionModel } from '@/models/stock/TransactionModels';
-import { ElButton, ElDatePicker, ElDialog, ElInput, ElOption, ElSelect } from 'element-plus';
+import { ElButton, ElDatePicker, ElDialog, ElInput, ElMessage, ElOption, ElSelect } from 'element-plus';
 import { ref } from 'vue';
 const props = defineProps<{
     isVisible: boolean,
@@ -76,14 +75,29 @@ const submit = () =>{
         model.value.fee = Number(model.value.fee)
         model.value.tax = Number(model.value.tax)
         stockAjax.post<Transaction>("/transactions",JSON.stringify(model.value)).then(res=>{
-            console.log(res)
+            ElMessage({
+                message: "Add new transaction successful",
+                type: "success"
+            })
+            onClose(res.data)
         }).catch(err=>{
-            console.log(err)
+            ElMessage({
+                message: err.response.data.error,
+                type: "error"
+            })
         })
     }
 }
 
-const onClose = ()=>{
-    emit("close")
+
+
+const onClose = (transaction: Transaction | null)=>{
+    emit("close", transaction)
+    model.value.match_volume = null
+    model.value.match_price = null
+    model.value.fee = null
+    model.value.tax = null
+    model.value.trading_date = new Date()
+    model.value.status = "COMPLETED"
 }
 </script>

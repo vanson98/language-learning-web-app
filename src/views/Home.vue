@@ -4,7 +4,8 @@
             <ElHeader>
                 <ElMenu mode="horizontal">
                     <ElMenuItem @click="goToLearningLanguagePage">Learning Language Page</ElMenuItem>
-                    <ElMenuItem @click="goToStockManagerPage">Stock Managing Page</ElMenuItem>
+                    <ElMenuItem @click="goToStockManagerPage">Stock Managing</ElMenuItem>
+                    <ElMenuItem @click="goToStockAccountsManagerPage">Stock Accounts</ElMenuItem>
                 </ElMenu>
             </ElHeader>
             <ElMain>
@@ -23,5 +24,9 @@ const goToLearningLanguagePage = () =>{
 
 const goToStockManagerPage = () =>{
     router.push("/stock-manager")
+}
+
+const goToStockAccountsManagerPage = () =>{
+    router.push("/stock-accounts-manager")
 }
 </script>

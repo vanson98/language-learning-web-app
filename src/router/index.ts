@@ -3,6 +3,7 @@ import Home from "../views/Home.vue"
 import PhraseManager from "@/views/PhraseManager.vue"
 import StockManagePage from "@/views/StockManagePage.vue"
 import LanguageLearningPage from "@/views/LanguageLearningPage.vue"
+import StockAccountManagePage from "@/views/StockAccountManagePage.vue"
 
 
 const routes: Array<RouteRecordRaw> = [
@@ -23,6 +24,11 @@ const routes: Array<RouteRecordRaw> = [
         path: "/stock-manager",
         name: "stock-manager",
         component: StockManagePage,
+    },
+    {
+        path: "/stock-accounts-manager",
+        name: "stock-accounts-manager",
+        component: StockAccountManagePage,
     },
     {
         path: "/language-learning",

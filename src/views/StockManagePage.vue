@@ -6,19 +6,13 @@
         <ElOption v-for="account in accountList" :key="account.id" :label="account.channel_name" :value="account.id">
         </ElOption>
       </ElSelect>
-      <el-input class="flex-none mx-2" style="width: 200px" placeholder="Nhập số liệu (/1000)" v-model="updateAmount"
-        :min="0" :type="'number'"></el-input>
-      <div v-if="accountInfo != null">
-        <el-button class="flex-none" type="primary" @click="depositMoney">Deposit</el-button>
-        <el-button class="flex-none" type="primary" @click="withdrawMoney">Withdraw</el-button>
-      </div>
     </div>
     <div class="grid grid-cols-3 gap-1 my-2">
       <div>
         <span>Deposit: {{ accountInfo?.deposit }}</span>
       </div>
       <div>
-        <span>Net Asset Value (NAV): {{ -6 }}</span>
+        <span>Net Asset Value (NAV): {{ accountInfo.balance }}</span>
       </div>
       <div>
         <span>Withdrawal: {{ accountInfo?.withdrawal }}</span>
@@ -48,11 +42,13 @@
       </div>
       <div class="flex-grow"></div>
       <div>
+        <ElButton @click="clearSelectInvestment()">Clear Select</ElButton>
         <ElButton @click="()=>addNewInvestmentDialogVisible=true">Add New Investment</ElButton>
       </div>
     </div>
     <div>
       <ElTable stripe style="width: 100" :data="investments" :default-sort="{prop: 'status', order:'descending'}" 
+        ref="investmentTableRef"
         @sort-change="onInvestmentTableSortChange"
         @current-change="handleCurrentChange"
         highlight-current-row>
@@ -69,13 +65,13 @@
         <ElTableColumn prop="status" label="Status" sortable="custom" />
         <ElTableColumn label="Action">
           <template #default="scope">
-            <el-button size="small" type="success" @click="openCreatingTransactionDialog(scope.row, 'BUY')">
+            <el-button size="small" type="success" @click="openAddingTransactionDialog(scope.row, 'BUY')">
               BUY
             </el-button>
             <el-button
               size="small"
               type="danger"
-              @click="openCreatingTransactionDialog(scope.row, 'SELL')"
+              @click="openAddingTransactionDialog(scope.row, 'SELL')"
             >
               SELL
             </el-button>
@@ -95,7 +91,7 @@
         @sort-change="onTransactionTableSortChange"
         
         >
-        <ElTableColumn prop="ticker" label="Ticker" sortable="custom" />
+        <ElTableColumn prop="ticker" label="Ticker"/>
         <ElTableColumn prop="trading_date" label="Tradind Date" sortable="custom" />
         <ElTableColumn prop="trade" label="Trade" />
         <ElTableColumn prop="volume" label="Volume" />
@@ -106,11 +102,11 @@
         <ElTableColumn prop="fee" label="Fee"></ElTableColumn>
         <ElTableColumn prop="tax" label="Tax"></ElTableColumn>
         <ElTableColumn prop="cost" label="Cost"/>
-        <ElTableColumn prop="cost_of_goods_sold" label="COGS" />
-        <ElTableColumn prop="return" label="Return" />
+        <ElTableColumn prop="cost_of_goods_sold" label="COGS" sortable="custom"/>
+        <ElTableColumn prop="return" label="Return" sortable="custom"/>
       </ElTable>
       <div class="flex justify-center my-2">
-        <ElPagination background layout="prev, pager, next" :total="totalTransactions" :page-size="10" @change="onTransactionTablePageChange" />
+        <ElPagination background layout="prev, pager, next" :total="totalTransactions" :page-size="9" @change="onTransactionTablePageChange" />
       </div>
     </div>
   </div>
@@ -147,6 +143,7 @@ import AddNewInvestmentDialog from "./modals/AddNewInvestmentDialog.vue";
 import { Investment } from "@/models/stock/InvestmentModels";
 import Transaction from "@/models/stock/TransactionModels";
 import AddNewTransactionDialog from "./modals/AddNewTransactionDialog.vue";
+import moment from "moment";
 
 const addNewInvestmentDialogVisible = ref<boolean>(false)
 const addNewTransactionDialogVisible = ref<boolean>(false)
@@ -168,7 +165,6 @@ const accountInfo = ref<AccountInfoDto>({
   owner: "",
   withdrawal: 0
 });
-const updateAmount = ref<number>();
 
 
 const updateChannel = (actionType: string) => {
@@ -230,99 +226,18 @@ const getAccountInfoById = () => {
   });
 };
 
-const depositMoney = () => {
-  if (!updateAmount.value || updateAmount.value < 0) {
-    ElMessage({
-      message: "Amount must be possitive",
-      type: "error",
-    });
-    return;
-  }
-  ElMessageBox.confirm("Bạn có chắc muốn nạp tiền?", "Warning", {
-    confirmButtonText: "OK",
-    cancelButtonText: "Cancel",
-    type: "warning",
-  })
-    .then(() => {
-      var url = `/account-transfer`;
-      var body = JSON.stringify({
-        accountId: accountInfo.value!.id,
-        amount: +updateAmount.value!,
-        entryType: "TM",
-        currency: accountInfo.value!.currency,
-      });
-      stockAjax
-        .put<AccountTransferResult>(url, body)
-        .then((res) => {
-          accountInfo.value!.balance = res.data.account.balance;
-          accountInfo.value!.deposit += res.data.entry.amount;
-        })
-        .catch((err) => {
-          ElMessage({
-            message: err.response.data.error,
-            type: "error",
-          });
-        });
-    })
-    .catch(() => {
-      ElMessage({
-        type: "info",
-        message: "Deposit canceled",
-      });
-    });
-};
 
-const withdrawMoney = () => {
-  if (!updateAmount.value || updateAmount.value < 0) {
-    ElMessage({
-      message: "Amount must be possitive",
-      type: "error",
-    });
-    return;
-  }
-  ElMessageBox.confirm("Bạn có chắc muốn rút tiền?", "Warning", {
-    confirmButtonText: "OK",
-    cancelButtonText: "Cancel",
-    type: "warning",
-  })
-    .then(() => {
-      var url = `/account-transfer`;
-      var body = JSON.stringify({
-        accountId: accountInfo.value!.id,
-        amount: 0 - updateAmount.value!,
-        entryType: "TM",
-        currency: accountInfo.value!.currency,
-      });
-      stockAjax
-        .put<AccountTransferResult>(url, body)
-        .then((res) => {
-          accountInfo.value!.balance = res.data.account.balance;
-          accountInfo.value!.withdrawal += res.data.entry.amount;
-        })
-        .catch((err) => {
-          ElMessage({
-            message: err.response.data.error,
-            type: "error",
-          });
-        });
-    })
-    .catch(() => {
-      ElMessage({
-        type: "info",
-        message: "Withdrawal canceled",
-      });
-    });
-};
 
 // ========================================= INVESTMENTS ==================================================
 const searchText = ref<string>("");
 const investments = ref<Investment[]>([])
 const currentInvestment = ref<Investment>();
-// paging properties
+// table properties
 let currentInvestmentPage = 1;
 const totalInvestments = ref<number>(0);
 let investmentSortProp = 'status'
 let investmentSortMode = 'descending'
+const investmentTableRef = ref<InstanceType<typeof ElTable>>()
 
 
 const onInvestmentTablePageChange = (currentPage: number, pageSize: number) =>{
@@ -353,8 +268,36 @@ const getInvestmentPaging = () =>{
   })
 }
 
+const getLatestInvesment = (investmentId: number) => {
+  var url = `investment/${investmentId}`
+  stockAjax.get<Investment>(url).then(res=>{
+    var newestInvestment = res.data
+    if (currentInvestment.value){
+      currentInvestment.value.buy_value = newestInvestment.buy_value
+      currentInvestment.value.buy_volume = newestInvestment.buy_volume
+      currentInvestment.value.capital_cost = newestInvestment.capital_cost
+      currentInvestment.value.current_volume = newestInvestment.current_volume
+      currentInvestment.value.market_price = newestInvestment.market_price
+      currentInvestment.value.sell_value = newestInvestment.sell_value
+      currentInvestment.value.sell_volume = newestInvestment.sell_volume
+      currentInvestment.value.fee = newestInvestment.fee
+      currentInvestment.value.tax = newestInvestment.tax
+      currentInvestment.value.status = newestInvestment.status
+    }
+  }).catch(err=>{
+    console.log(err.response.data)
+  })
+}
+
 const handleCurrentChange = (val: Investment | undefined) => {
   currentInvestment.value = val
+  getTransactionPaging()
+}
+
+const clearSelectInvestment = () => {
+  investmentTableRef.value!.setCurrentRow(undefined)
+  searchText.value = ""
+  getTransactionPaging()
 }
 
 // ========================================= TRANSACTIONS ==================================================
@@ -362,10 +305,18 @@ const transactions = ref<Transaction[]>([])
 // transaction table properties
 const totalTransactions = ref<number>(0);
 let currentTransactionPage = 1;
+let transactionOrderBy = 'trading_date'
+let transactionOrderType = 'descending'
 const tradingMode = ref<string>("BUY")
 
-const onTransactionTableSortChange = () =>{
 
+const getTransactionPaging = () =>{
+  var ticker = currentInvestment.value ? currentInvestment.value.ticker : ""
+  var url = `/transactions?account_id=${selectedAccountId.value}&ticker=${ticker}&order_by=${transactionOrderBy}&order_type=${transactionOrderType}&page=${currentTransactionPage}&page_size=9`
+  stockAjax.get(url).then(res=>{
+    transactions.value =  res.data.transactions
+    totalTransactions.value = res.data.total
+  })
 }
 
 const onTransactionTablePageChange = (page: number) => {
@@ -373,22 +324,27 @@ const onTransactionTablePageChange = (page: number) => {
   getTransactionPaging()
 }
 
-const getTransactionPaging = () =>{
-  var ticker = currentInvestment.value ? currentInvestment.value.ticker : ""
-  var url = `/transactions?account_id=${selectedAccountId.value}&ticker=${ticker}&page=${currentTransactionPage}&page_size=10`
-  stockAjax.get(url).then(res=>{
-    transactions.value =  res.data.transactions
-  })
+const onTransactionTableSortChange = (data: {column: any, prop: string, order: any }) =>{
+  transactionOrderBy = data.prop
+  transactionOrderType = data.order
+  getTransactionPaging()
 }
 
-const openCreatingTransactionDialog = (row: Investment, trade: string) =>{
+const openAddingTransactionDialog = (row: Investment, trade: string) =>{
   //console.log(row.account_id)
   addNewTransactionDialogVisible.value = true 
   tradingMode.value = trade
+  
 }
 
 const onCloseCreatingTransactionDialog = (tx: Transaction) => {
   addNewTransactionDialogVisible.value = false
+  if(tx != null){
+    //tx.trading_date = (moment(tx.trading_date)).format("DD/MM/YYYY")
+    //transactions.value.push(tx)
+    getLatestInvesment(tx.investment_id)
+    getTransactionPaging()
+  }
 }
 
 
