@@ -2,6 +2,12 @@
     <ElDialog v-bind:model-value="visible" title="Add New Investmnet" @close="()=>closeDialog(null)">
         <div>
             <div>
+                <label>Channel Account *</label>
+                <ElSelect v-model:model-value="model.account_id">
+                    <ElOption v-for="acc in accounts" :key="acc.id" :label="acc.channel_name" :value="acc.id"></ElOption>
+                </ElSelect>
+            </div>
+            <div>
                 <label>Ticker *</label>
                 <ElInput v-model="model.ticker" type="text" placeholder="Ticker"></ElInput>
             </div>
@@ -28,18 +34,17 @@
 
 <script setup lang="ts">
 import { stockAjax } from '@/libs/ajax';
-import STTReponseErrorModel from '@/models/response/StockTrackerResponseModel';
-import AddNewInvestmnetModel, { Investment } from '@/models/stock/InvestmentModels';
-import { AxiosError } from 'axios';
-import { ElButton, ElDialog, ElInput, ElMessage, ElText } from 'element-plus';
+import { AccountSelectDto } from '@/models/stock/AccountModels';
+import AddNewInvestmnetModel, { InvestmentRow } from '@/models/stock/InvestmentModels';
+import { ElButton, ElDialog, ElInput, ElMessage, ElOption, ElSelect, ElText } from 'element-plus';
 import { ref } from 'vue';
 
 const props = defineProps<{
     visible: boolean,
-    accountId: number
+    accounts: AccountSelectDto[]
 }>()
 const model = ref<AddNewInvestmnetModel>({
-    account_id: 0,
+    account_id: undefined,
     company_name: "",
     description: "",
     market_price: 0,
@@ -47,35 +52,37 @@ const model = ref<AddNewInvestmnetModel>({
 })
 
 const emit = defineEmits({
-    onclose: (investment: Investment | null)=>{}
+    onclose: (investment: InvestmentRow | null)=>{}
 })
 
 
-const closeDialog = (investment: Investment | null) =>{
+const closeDialog = (investment: InvestmentRow | null) =>{
     emit("onclose", investment)
 }
 
 const save = () =>{
-    model.value.account_id = props.accountId
-    model.value.market_price = Number(model.value.market_price)
-    var bodyData = JSON.stringify(model.value)
-    stockAjax.post<Investment>("/investment",bodyData).then(res =>{
-        ElMessage({
-            type: 'success',
-            message: 'create new investment successful'
+   
+        model.value.market_price = Number(model.value.market_price)
+        var bodyData = JSON.stringify(model.value)
+        stockAjax.post<InvestmentRow>("/investment",bodyData).then(res =>{
+            ElMessage({
+                type: 'success',
+                message: 'create new investment successful'
+            })
+            model.value.account_id = 0
+            model.value.company_name = ""
+            model.value.description = ""
+            model.value.market_price = 0
+            model.value.ticker = ""
+            closeDialog(res.data)
+        }).catch(err  => {
+            ElMessage({
+                type: 'error',
+                message: err.response?.data.error
+            })
         })
-        model.value.account_id = 0
-        model.value.company_name = ""
-        model.value.description = ""
-        model.value.market_price = 0
-        model.value.ticker = ""
-        closeDialog(res.data)
-    }).catch((err : AxiosError<STTReponseErrorModel>) => {
-        ElMessage({
-            type: 'error',
-            message: err.response?.data.error
-        })
-    })
+    
+    
 }
 
 

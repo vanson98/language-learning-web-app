@@ -1,14 +1,16 @@
 export default interface AddNewInvestmnetModel {
-  account_id: number;
+  account_id?: number;
   ticker: string;
   company_name: string;
   market_price: number;
   description: string;
 }
 
-export interface Investment {
+export interface InvestmentRow {
   id: number;
   account_id: number;
+  channel_name: string;
+  ticker: string;
   buy_value: number;
   buy_volume: number;
   capital_cost: number;
@@ -21,6 +23,4 @@ export interface Investment {
   sell_volume: number;
   status: string;
   tax: number;
-  ticker: string;
-  updated_date: Date;
 }

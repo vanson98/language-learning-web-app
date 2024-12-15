@@ -23,7 +23,7 @@
 import { stockAjax } from '@/libs/ajax';
 import STTReponseErrorModel from '@/models/response/StockTrackerResponseModel';
 import { CreateAccountDto } from '@/models/stock/AccountModels';
-import AddNewInvestmnetModel, { Investment } from '@/models/stock/InvestmentModels';
+import AddNewInvestmnetModel, { InvestmentRow } from '@/models/stock/InvestmentModels';
 import { AxiosError } from 'axios';
 import { ElButton, ElDialog, ElInput, ElMessage, ElText } from 'element-plus';
 import { ref } from 'vue';
@@ -38,17 +38,17 @@ const model = ref<CreateAccountDto>({
 })
 
 const emit = defineEmits({
-    onclose: (investment: Investment | null)=>{}
+    onclose: (investment: InvestmentRow | null)=>{}
 })
 
 
-const closeDialog = (investment: Investment | null) =>{
+const closeDialog = (investment: InvestmentRow | null) =>{
     emit("onclose", investment)
 }
 
 const save = () =>{
     var bodyData = JSON.stringify(model.value)
-    stockAjax.post<Investment>("/accounts",bodyData).then(res =>{
+    stockAjax.post<InvestmentRow>("/accounts",bodyData).then(res =>{
         ElMessage({
             type: 'success',
             message: 'create new investment successful'

@@ -41,18 +41,16 @@
 
 <script lang="ts" setup>
 import { stockAjax } from '@/libs/ajax';
-import Transaction, { CreateNewTransactionModel } from '@/models/stock/TransactionModels';
+import TransactionRow, { CreateNewTransactionModel } from '@/models/stock/TransactionModels';
 import { ElButton, ElDatePicker, ElDialog, ElInput, ElMessage, ElOption, ElSelect } from 'element-plus';
 import { ref } from 'vue';
 const props = defineProps<{
     isVisible: boolean,
-    accountId: number,
     investmentId?: number,
     trade: string
 }>()
 
 const model = ref<CreateNewTransactionModel>({
-    account_id: 0,
     trading_date: new Date(),
     investment_id: 0,
     fee: null,
@@ -67,14 +65,13 @@ const emit = defineEmits(["close"])
 
 const submit = () =>{
     if(props.investmentId != null){
-        model.value.account_id = props.accountId
         model.value.investment_id = props.investmentId
         model.value.trade = props.trade
         model.value.match_price = Number(model.value.match_price)
         model.value.match_volume = Number(model.value.match_volume)
         model.value.fee = Number(model.value.fee)
         model.value.tax = Number(model.value.tax)
-        stockAjax.post<Transaction>("/transactions",JSON.stringify(model.value)).then(res=>{
+        stockAjax.post<TransactionRow>("/transactions",JSON.stringify(model.value)).then(res=>{
             ElMessage({
                 message: "Add new transaction successful",
                 type: "success"
@@ -91,7 +88,7 @@ const submit = () =>{
 
 
 
-const onClose = (transaction: Transaction | null)=>{
+const onClose = (transaction: TransactionRow | null)=>{
     emit("close", transaction)
     model.value.match_volume = null
     model.value.match_price = null

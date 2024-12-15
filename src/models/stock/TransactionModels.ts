@@ -1,6 +1,7 @@
-export default interface Transaction {
+export default interface TransactionRow {
     id: number,
     investment_id: number,
+    channel_name: string,
     ticker: string,
     trading_date: string,
     trade: string, 
@@ -18,7 +19,6 @@ export default interface Transaction {
 }
 
 export interface CreateNewTransactionModel{
-    account_id: number,
     investment_id: number,
     trading_date: Date,
     trade: string,

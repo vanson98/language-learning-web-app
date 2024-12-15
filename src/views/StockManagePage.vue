@@ -1,39 +1,32 @@
 <template>
   <div class="m-2">
     <div class="flex">
-      <ElSelect class="flex-none" placeholder="Chọn tài khoản" v-model="selectedAccountId" style="width: 100px"
-        @change="onSelectAccountChange">
+      <ElSelect class="flex-none" placeholder="Chọn tài khoản" multiple v-model="selectedAccountIds"
+        style="width: 350px" @change="onSelectAccountChange">
         <ElOption v-for="account in accountList" :key="account.id" :label="account.channel_name" :value="account.id">
         </ElOption>
       </ElSelect>
     </div>
-    <div class="grid grid-cols-3 gap-1 my-2">
-      <div>
-        <span>Deposit: {{ accountInfo?.deposit }}</span>
-      </div>
-      <div>
-        <span>Net Asset Value (NAV): {{ accountInfo.balance }}</span>
-      </div>
-      <div>
-        <span>Withdrawal: {{ accountInfo?.withdrawal }}</span>
-      </div>
-      <div>
-        <span>Tổng giá trị CP (lúc mua): {{ 3000 }}</span>
-      </div>
-      <div>
-        <span>Tổng giá trị thị trường (hiện tại): {{ 2000 }}</span>
-      </div>
-      <div>
-        <span>Lãi lỗ: +{{ 1000 }}</span>
-      </div>
-      <div>
-        <span>Cash: {{ accountInfo?.balance }}</span>
-      </div>
-      <div>
-        <span>Fee: +{{ 1000 }}</span>
-      </div>
-      <div>
-        <span>Tax: +{{ 1000 }}</span>
+    <div v-for="accInfo in accountInfos">
+      <div class="grid grid-cols-6 grap-1">
+        <div>
+          <span>{{ accInfo.channel_name }}</span>
+        </div>
+        <div>
+          <span>NAV: {{ (accInfo.cash + accInfo.total_cogs) / 1000 }}</span>
+        </div>
+        <div>
+          <span>Cash: {{ accInfo.cash / 1000 }}</span>
+        </div>
+        <div>
+          <span>Total COGS: {{ accInfo.total_cogs / 1000 }}</span>
+        </div>
+        <div>
+          <span>Market Value: {{ accInfo.market_value / 1000 }}</span>
+        </div>
+        <div>
+          <span>Profit/Loss: {{ (accInfo.market_value - accInfo.total_cogs) / 1000 }}</span>
+        </div>
       </div>
     </div>
     <div class="flex flex-row">
@@ -47,76 +40,119 @@
       </div>
     </div>
     <div>
-      <ElTable stripe style="width: 100" :data="investments" :default-sort="{prop: 'status', order:'descending'}" 
-        ref="investmentTableRef"
-        @sort-change="onInvestmentTableSortChange"
-        @current-change="handleCurrentChange"
+      <ElTable stripe style="width: 100" :data="investments" :default-sort="{prop: 'status', order:'descending'}"
+        ref="investmentTableRef" @sort-change="onInvestmentTableSortChange" @current-change="handleCurrentChange"
         highlight-current-row>
-        <ElTableColumn prop="ticker" label="Ticker" sortable="custom" />
-        <ElTableColumn prop="buy_value" label="Buy Value" />
-        <ElTableColumn prop="buy_volume" label="Buy Volume" />
-        <ElTableColumn prop="capital_cost" label="Capital Cost" />
-        <ElTableColumn prop="current_volume" label="Current Volume" />
-        <ElTableColumn prop="market_price" label="Market Price" />
-        <ElTableColumn prop="sell_value" label="Sell Value" />
-        <ElTableColumn prop="sell_volume" label="Sell Volume" />
-        <ElTableColumn prop="fee" label="Fee"></ElTableColumn>
-        <ElTableColumn prop="tax" label="Tax"></ElTableColumn>
-        <ElTableColumn prop="status" label="Status" sortable="custom" />
-        <ElTableColumn label="Action">
+        <ElTableColumn prop="channel_name" label="Channel" sortable="custom" :width="110" />
+        <ElTableColumn prop="ticker" label="Ticker" sortable="custom" :width="110"/>
+        <ElTableColumn prop="buy_value" label="Buy Value" >
           <template #default="scope">
-            <el-button size="small" type="success" @click="openAddingTransactionDialog(scope.row, 'BUY')">
+            <span>{{ scope.row.buy_value / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="buy_volume" label="Buy Volume" />
+        <ElTableColumn prop="capital_cost" label="Capital Cost" >
+          <template #default="scope">
+            <span>{{ scope.row.capital_cost / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="current_volume" label="Current Volume" />
+        <ElTableColumn prop="market_price" label="Market Price" >
+          <template #default="scope">
+            <span>{{ scope.row.market_price / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="sell_value" label="Sell Value" >
+          <template #default="scope">
+            <span>{{ scope.row.sell_value / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="sell_volume" label="Sell Volume" />
+        <ElTableColumn prop="fee" label="Fee">
+          <template #default="scope">
+            <span>{{ scope.row.fee / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="tax" label="Tax">
+          <template #default="scope">``
+            <span>{{ scope.row.tax / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="status" label="Status" sortable="custom" />
+        <ElTableColumn label="Action" :width="150">
+          <template #default="scope">
+            <el-button size="small" type="success" @click="openCreateTransactionDialog(scope.row, 'BUY')">
               BUY
             </el-button>
-            <el-button
-              size="small"
-              type="danger"
-              @click="openAddingTransactionDialog(scope.row, 'SELL')"
-            >
+            <el-button size="small" type="danger" @click="openCreateTransactionDialog(scope.row, 'SELL')">
               SELL
             </el-button>
           </template>
         </ElTableColumn>
       </ElTable>
       <div class="flex justify-center my-2">
-        <ElPagination background layout="prev, pager, next" :total="totalInvestments" :page-size="6" @change="onInvestmentTablePageChange" />
+        <ElPagination background layout="prev, pager, next" :total="totalInvestments" :page-size="6"
+          @change="onInvestmentTablePageChange" />
       </div>
     </div>
     <div>
-      <ElTable 
-        stripe 
-        style="width: 100" 
-        :data="transactions" 
-        :default-sort="{prop: 'trading_date', order:'descending'}"  
-        @sort-change="onTransactionTableSortChange"
-        
-        >
-        <ElTableColumn prop="ticker" label="Ticker"/>
+      <ElTable stripe style="width: 100" :data="transactions" :default-sort="{prop: 'trading_date', order:'descending'}"
+        @sort-change="onTransactionTableSortChange">
+        <ElTableColumn prop="channel_name" label="Channel " :width="120" />
+        <ElTableColumn prop="ticker" label="Ticker" :width="120" />
         <ElTableColumn prop="trading_date" label="Tradind Date" sortable="custom" />
         <ElTableColumn prop="trade" label="Trade" />
-        <ElTableColumn prop="volume" label="Volume" />
-        <ElTableColumn prop="order_price" label="Order Price" />
+        <!-- <ElTableColumn prop="volume" label="Volume" />
+        <ElTableColumn prop="order_price" label="Order Price" >
+          <template #default="scope">
+            <span>{{ scope.row.order_price / 1000 }}</span>
+          </template>
+        </ElTableColumn> -->
         <ElTableColumn prop="match_volume" label="Match Vol" />
-        <ElTableColumn prop="match_price" label="Match Price" />
-        <ElTableColumn prop="match_value" label="Match Value" />
-        <ElTableColumn prop="fee" label="Fee"></ElTableColumn>
-        <ElTableColumn prop="tax" label="Tax"></ElTableColumn>
-        <ElTableColumn prop="cost" label="Cost"/>
-        <ElTableColumn prop="cost_of_goods_sold" label="COGS" sortable="custom"/>
-        <ElTableColumn prop="return" label="Return" sortable="custom"/>
+        <ElTableColumn prop="match_price" label="Match Price">
+          <template #default="scope">
+            <span>{{ scope.row.match_price / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="match_value" label="Match Value" >
+          <template #default="scope">
+            <span>{{ scope.row.match_value / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="fee" label="Fee">
+          <template #default="scope">
+            <span>{{ scope.row.fee / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="tax" label="Tax">
+          <template #default="scope">
+            <span>{{ scope.row.tax / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="cost" label="Cost" >
+          <template #default="scope">
+            <span>{{ scope.row.cost / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="cost_of_goods_sold" label="COGS" sortable="custom" >
+          <template #default="scope">
+            <span>{{ scope.row.cost_of_goods_sold / 1000 }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="return" label="Return" sortable="custom" >
+          <template #default="scope">
+            <span>{{ scope.row.return / 1000 }}</span>
+          </template>
+        </ElTableColumn>
       </ElTable>
       <div class="flex justify-center my-2">
-        <ElPagination background layout="prev, pager, next" :total="totalTransactions" :page-size="9" @change="onTransactionTablePageChange" />
+        <ElPagination background layout="prev, pager, next" :total="totalTransactions" :page-size="9"
+          @change="onTransactionTablePageChange" />
       </div>
     </div>
   </div>
-  <AddNewInvestmentDialog :visible="addNewInvestmentDialogVisible" @onclose="onAddingInvestmentDialogClose" :account-id="accountInfo.id"/>
-  <AddNewTransactionDialog 
-  :is-visible="addNewTransactionDialogVisible" 
-  :account-id="selectedAccountId" 
-  :investment-id="currentInvestment?.id" 
-  :trade="tradingMode"
-  @close="onCloseCreatingTransactionDialog"/>
+  <AddNewInvestmentDialog :visible="addNewInvestmentDialogVisible" @onclose="onAddingInvestmentDialogClose" :accounts="accountList"/>
+  <CreateTransactionDialog :is-visible="addNewTransactionDialogVisible" :investment-id="currentInvestment?.id" :trade="tradingMode" @close="onCloseCreatingTransactionDialog" />
 </template>
 
 <script setup lang="ts">
@@ -140,10 +176,12 @@ import {
 } from "element-plus";
 import { ajax, stockAjax } from "@/libs/ajax";
 import AddNewInvestmentDialog from "./modals/AddNewInvestmentDialog.vue";
-import { Investment } from "@/models/stock/InvestmentModels";
-import Transaction from "@/models/stock/TransactionModels";
-import AddNewTransactionDialog from "./modals/AddNewTransactionDialog.vue";
+import { InvestmentRow } from "@/models/stock/InvestmentModels";
+import TransactionRow from "@/models/stock/TransactionModels";
+import AddNewTransactionDialog from "./modals/CreateTransactionDialog.vue";
 import moment from "moment";
+import { pa } from "element-plus/es/locale";
+import CreateTransactionDialog from "./modals/CreateTransactionDialog.vue";
 
 const addNewInvestmentDialogVisible = ref<boolean>(false)
 const addNewTransactionDialogVisible = ref<boolean>(false)
@@ -155,68 +193,35 @@ onMounted(() => {
 
 // ========================================= ACCOUNTS ==================================================
 const accountList = ref<AccountSelectDto[]>([]);
-const selectedAccountId = ref<number>(0);
-const accountInfo = ref<AccountInfoDto>({
-  id: 0,
-  balance: 0,
-  channel_name: "",
-  currency: "",
-  deposit: 0,
-  owner: "",
-  withdrawal: 0
-});
-
-
-const updateChannel = (actionType: string) => {
-  var messageAlert = "";
-  if (actionType == "add-money") {
-    messageAlert = "Bạn có chắc muốn thêm tiền?";
-  } else if (actionType == "withdraw-money") {
-    messageAlert = "Bạn có chắc muốn rút tiền?";
-  } else if (actionType == "update-buy-fee") {
-    messageAlert = "Bạn có chắc muốn cập nhật phí mua?";
-  } else if (actionType == "update-sell-fee") {
-    messageAlert = "Bạn có chắc muốn cập nhật phí bán?";
-  }
-
-  ElMessageBox.confirm(messageAlert, "Warning", {
-    confirmButtonText: "OK",
-    cancelButtonText: "Cancel",
-    type: "warning",
-  }).then(() => {
-    if (actionType == "add-money") {
-      //addMoneyInput();
-    } else if (actionType == "withdraw-money") {
-      //withdrawMoney();
-    } else if (actionType == "update-buy-fee") {
-      //updateFee("BF");
-    } else if (actionType == "update-sell-fee") {
-      //updateFee("SF");
-    }
-  });
-};
-
+const selectedAccountIds = ref<number[]>([]);
+const accountInfos = ref<AccountInfoDto[]>([]);
 
 const onSelectAccountChange = ()=>{
-  getAccountInfoById()
+  getAccountInfoByIds()
   getInvestmentPaging()
   getTransactionPaging();
 }
 
 const getAllAccount = () => {
-  stockAjax.get<AccountSelectDto[]>("/accounts").then((res) => {
+  stockAjax.get<AccountSelectDto[]>("/accounts?owner=vanson").then((res) => {
     res.data.forEach((a) => {
       accountList.value.push(a);
+      selectedAccountIds.value.push(a.id);
     });
-    selectedAccountId.value = res.data[0].id;
+    
     onSelectAccountChange()
   });
 };
 
-const getAccountInfoById = () => {
-  var url = `/account-info/${selectedAccountId.value}`;
-  stockAjax.get<AccountInfoDto>(url).then((res) => {
-    accountInfo.value = res.data;
+const getAccountInfoByIds = () => {
+  var url = `/account-info?`;
+  if (selectedAccountIds.value.length > 0){
+    selectedAccountIds.value.forEach(id=>{
+      url += `ids=${id}&`
+    })
+  }
+  stockAjax.get<AccountInfoDto[]>(url).then((res) => {
+    accountInfos.value = res.data;
   }).catch(()=>{
     ElAlert.error({
       title: "Error",
@@ -228,10 +233,35 @@ const getAccountInfoById = () => {
 
 
 
+const getLatestAccountInfo = (accId: number) =>{
+  var url = `/account-info`
+  stockAjax.get<AccountInfoDto[]>(url,{
+    params: {
+      ids: accId
+    }
+  }).then(res=>{
+    var accountInfo = res.data[0]
+    var updateAccountInfo = accountInfos.value.find(a=>a.id == accId)
+    if (updateAccountInfo){
+      updateAccountInfo.cash = accountInfo.cash
+      updateAccountInfo.market_value = accountInfo.market_value
+      updateAccountInfo.total_cogs = accountInfo.total_cogs
+    }
+  }).catch(err=>{
+    ElAlert.error({
+      title: "Error",
+      message: err.response.data.error,
+      showClose: true,
+    });
+  })
+}
+
+
+
 // ========================================= INVESTMENTS ==================================================
 const searchText = ref<string>("");
-const investments = ref<Investment[]>([])
-const currentInvestment = ref<Investment>();
+const investments = ref<InvestmentRow[]>([])
+const currentInvestment = ref<InvestmentRow>();
 // table properties
 let currentInvestmentPage = 1;
 const totalInvestments = ref<number>(0);
@@ -245,10 +275,10 @@ const onInvestmentTablePageChange = (currentPage: number, pageSize: number) =>{
   getInvestmentPaging()
 }
 
-const onAddingInvestmentDialogClose = (investment: Investment | null) =>{
+const onAddingInvestmentDialogClose = (investment: InvestmentRow | null) =>{
   addNewInvestmentDialogVisible.value = false
   if (investment){
-    investments.value.push(investment)
+    getInvestmentPaging()
   }
 }
 
@@ -259,8 +289,17 @@ const onInvestmentTableSortChange = (data: {column: any, prop: string, order: an
 }
 
 const getInvestmentPaging = () =>{
-  var url = `/investments?account_id=${selectedAccountId.value}&search_text=${searchText.value.trim()}&order_by=${investmentSortProp}&sort_type=${investmentSortMode}&page=${currentInvestmentPage}&page_size=6`
-  stockAjax.get(url).then(res=>{
+  var queryParams = {
+    account_ids: selectedAccountIds.value,
+    search_text: searchText.value.trim(),
+    order_by: investmentSortProp,
+    sort_type: investmentSortMode,
+    page: currentInvestmentPage,
+    page_size: 6
+  }
+  stockAjax.get("/investments",{
+    params: queryParams
+  }).then(res=>{
     investments.value = res.data.investments
     totalInvestments.value = res.data.total_items
   }).catch(err=>{
@@ -270,7 +309,7 @@ const getInvestmentPaging = () =>{
 
 const getLatestInvesment = (investmentId: number) => {
   var url = `investment/${investmentId}`
-  stockAjax.get<Investment>(url).then(res=>{
+  stockAjax.get<InvestmentRow>(url).then(res=>{
     var newestInvestment = res.data
     if (currentInvestment.value){
       currentInvestment.value.buy_value = newestInvestment.buy_value
@@ -289,9 +328,9 @@ const getLatestInvesment = (investmentId: number) => {
   })
 }
 
-const handleCurrentChange = (val: Investment | undefined) => {
+const handleCurrentChange = (val: InvestmentRow | undefined) => {
   currentInvestment.value = val
-  getTransactionPaging()
+  getTransactionPaging(val?.account_id)
 }
 
 const clearSelectInvestment = () => {
@@ -301,7 +340,7 @@ const clearSelectInvestment = () => {
 }
 
 // ========================================= TRANSACTIONS ==================================================
-const transactions = ref<Transaction[]>([])
+const transactions = ref<TransactionRow[]>([])
 // transaction table properties
 const totalTransactions = ref<number>(0);
 let currentTransactionPage = 1;
@@ -310,10 +349,22 @@ let transactionOrderType = 'descending'
 const tradingMode = ref<string>("BUY")
 
 
-const getTransactionPaging = () =>{
+const getTransactionPaging = (acc_id?: number) =>{
   var ticker = currentInvestment.value ? currentInvestment.value.ticker : ""
-  var url = `/transactions?account_id=${selectedAccountId.value}&ticker=${ticker}&order_by=${transactionOrderBy}&order_type=${transactionOrderType}&page=${currentTransactionPage}&page_size=9`
-  stockAjax.get(url).then(res=>{
+  stockAjax.get("/transactions",{
+    params: {
+      account_ids: acc_id ? acc_id : selectedAccountIds.value,
+      ticker: ticker,
+      order_by: transactionOrderBy,
+      order_type: transactionOrderType,
+      page: currentTransactionPage,
+      page_size: 10
+    },
+    paramsSerializer: {
+      indexes: null, 
+    }
+  }
+  ).then(res=>{
     transactions.value =  res.data.transactions
     totalTransactions.value = res.data.total
   })
@@ -330,20 +381,19 @@ const onTransactionTableSortChange = (data: {column: any, prop: string, order: a
   getTransactionPaging()
 }
 
-const openAddingTransactionDialog = (row: Investment, trade: string) =>{
+const openCreateTransactionDialog = (row: InvestmentRow, trade: string) =>{
   //console.log(row.account_id)
   addNewTransactionDialogVisible.value = true 
   tradingMode.value = trade
   
 }
 
-const onCloseCreatingTransactionDialog = (tx: Transaction) => {
+const onCloseCreatingTransactionDialog = (tx: TransactionRow) => {
   addNewTransactionDialogVisible.value = false
   if(tx != null){
-    //tx.trading_date = (moment(tx.trading_date)).format("DD/MM/YYYY")
-    //transactions.value.push(tx)
     getLatestInvesment(tx.investment_id)
-    getTransactionPaging()
+    getLatestAccountInfo(currentInvestment.value!.account_id)
+    getTransactionPaging(currentInvestment.value?.account_id)
   }
 }
 

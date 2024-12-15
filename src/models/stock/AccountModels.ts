@@ -8,11 +8,9 @@ export interface AccountSelectDto{
 export interface AccountInfoDto{
     id: number;
     channel_name: string;
-    owner: string;
-    balance: number;
-    currency: string;
-    deposit: number;
-    withdrawal: number;
+    cash: number;
+    total_cogs: number;
+    market_value: number;
 }
 
 export default interface AccountDto{
