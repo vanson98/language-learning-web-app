@@ -1,12 +1,35 @@
 <template>
   <div class="m-2">
-    <div class="flex">
+    <div class="flex justify-between">
       <ElSelect class="flex-none" placeholder="Chọn tài khoản" multiple v-model="selectedAccountIds"
         style="width: 350px" @change="onSelectAccountChange">
         <ElOption v-for="account in accountList" :key="account.id" :label="account.channel_name" :value="account.id">
         </ElOption>
       </ElSelect>
+      <div>
+        <ElUpload
+          ref="tcbsTransactionUploader"
+          :action="`${SERVER_STOCK_TRACKER_URL}/tcbs-import`"
+          :auto-upload="false"
+          :multiple="false"
+          :accept="'.xlsx'"
+          :limit="1"
+          :name="'tcbs_transaction_export_data'"
+          :data="{account_id: selectedAccountIds[0]}"
+          :on-exceed="handleExceed"
+          :on-error="onUploadTbcsTransactionError"
+          :on-success="onUploadTcbsTransactionSuccess"
+        >
+          <template #trigger>
+            <el-button type="primary">Select TCBS file</el-button>
+          </template>
+          <el-button class="ml-3" type="success" @click="submitUpload">
+            upload to server
+          </el-button>
+        </ElUpload>
+      </div>
     </div>
+    <!-- Account Overview -->
     <div v-for="accInfo in accountInfos">
       <div class="grid grid-cols-6 grap-1">
         <div>
@@ -39,6 +62,7 @@
         <ElButton @click="()=>addNewInvestmentDialogVisible=true">Add New Investment</ElButton>
       </div>
     </div>
+    <!-- Investment Table -->
     <div>
       <ElTable stripe style="width: 100" :data="investments" :default-sort="{prop: 'status', order:'descending'}"
         ref="investmentTableRef" @sort-change="onInvestmentTableSortChange" @current-change="handleCurrentChange"
@@ -74,7 +98,7 @@
           </template>
         </ElTableColumn>
         <ElTableColumn prop="tax" label="Tax">
-          <template #default="scope">``
+          <template #default="scope">
             <span>{{ scope.row.tax / 1000 }}</span>
           </template>
         </ElTableColumn>
@@ -95,6 +119,7 @@
           @change="onInvestmentTablePageChange" />
       </div>
     </div>
+    <!-- Transaction Table -->
     <div>
       <ElTable stripe style="width: 100" :data="transactions" :default-sort="{prop: 'trading_date', order:'descending'}"
         @sort-change="onTransactionTableSortChange">
@@ -173,6 +198,11 @@ import {
   ElAlert,
   ElMessage,
   ElPagination,
+  ElUpload,
+  UploadInstance,
+  UploadProps,
+  UploadRawFile,
+  genFileId,
 } from "element-plus";
 import { ajax, stockAjax } from "@/libs/ajax";
 import AddNewInvestmentDialog from "./modals/AddNewInvestmentDialog.vue";
@@ -182,6 +212,7 @@ import AddNewTransactionDialog from "./modals/CreateTransactionDialog.vue";
 import moment from "moment";
 import { pa } from "element-plus/es/locale";
 import CreateTransactionDialog from "./modals/CreateTransactionDialog.vue";
+import { SERVER_STOCK_TRACKER_URL } from "@/libs/url";
 
 const addNewInvestmentDialogVisible = ref<boolean>(false)
 const addNewTransactionDialogVisible = ref<boolean>(false)
@@ -195,6 +226,7 @@ onMounted(() => {
 const accountList = ref<AccountSelectDto[]>([]);
 const selectedAccountIds = ref<number[]>([]);
 const accountInfos = ref<AccountInfoDto[]>([]);
+const tcbsTransactionUploader = ref<UploadInstance>()
 
 const onSelectAccountChange = ()=>{
   getAccountInfoByIds()
@@ -206,9 +238,9 @@ const getAllAccount = () => {
   stockAjax.get<AccountSelectDto[]>("/accounts?owner=vanson").then((res) => {
     res.data.forEach((a) => {
       accountList.value.push(a);
-      selectedAccountIds.value.push(a.id);
+      
     });
-    
+    selectedAccountIds.value.push(accountList.value[0].id);
     onSelectAccountChange()
   });
 };
@@ -256,7 +288,32 @@ const getLatestAccountInfo = (accId: number) =>{
   })
 }
 
+const handleExceed: UploadProps['onExceed'] = (files) => {
+  tcbsTransactionUploader.value!.clearFiles()
+  const file = files[0] as UploadRawFile
+  file.uid = genFileId()
+  tcbsTransactionUploader.value!.handleStart(file)
+}
 
+const submitUpload = () => {
+  tcbsTransactionUploader.value!.submit()
+}
+
+const onUploadTcbsTransactionSuccess = () => {
+  ElMessage({
+    type: 'success',
+    message: 'import tbcs transaction successful',
+  })
+  onSelectAccountChange()
+}
+
+const onUploadTbcsTransactionError = (err : Error) => {
+  debugger
+  ElMessage({
+    type: 'error',
+    message: err.message,
+  })
+}
 
 // ========================================= INVESTMENTS ==================================================
 const searchText = ref<string>("");
