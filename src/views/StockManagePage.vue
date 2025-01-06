@@ -48,7 +48,7 @@
           <span>Market Value: {{ accInfo.market_value / 1000 }}</span>
         </div>
         <div>
-          <span>Profit/Loss: {{ (accInfo.market_value - accInfo.total_cogs) / 1000 }}</span>
+          <span>Profit: {{ (accInfo.market_value - accInfo.total_cogs) / 1000 }}</span>
         </div>
       </div>
     </div>
@@ -83,7 +83,7 @@
         <ElTableColumn prop="current_volume" label="Current Volume" />
         <ElTableColumn prop="market_price" label="Market Price" >
           <template #default="scope">
-            <span>{{ scope.row.market_price / 1000 }}</span>
+            <span>{{ (scope.row.market_price / 1000) }}</span>
           </template>
         </ElTableColumn>
         <ElTableColumn prop="sell_value" label="Sell Value" >
@@ -92,7 +92,7 @@
           </template>
         </ElTableColumn>
         <ElTableColumn prop="sell_volume" label="Sell Volume" />
-        <ElTableColumn prop="fee" label="Fee">
+        <!-- <ElTableColumn prop="fee" label="Fee">
           <template #default="scope">
             <span>{{ scope.row.fee / 1000 }}</span>
           </template>
@@ -101,8 +101,20 @@
           <template #default="scope">
             <span>{{ scope.row.tax / 1000 }}</span>
           </template>
+        </ElTableColumn> -->
+        <ElTableColumn label="Profit" prop="profit" sortable="custom">
+          <template #default="scope">
+              <span v-if="scope.row.status == 'sellout'"> {{scope.row.profit }}%</span>
+              <span v-if="scope.row.status == 'active'">{{ scope.row.profit }}%</span>
+          </template>
         </ElTableColumn>
-        <ElTableColumn prop="status" label="Status" sortable="custom" />
+        <ElTableColumn prop="status" label="Status" sortable="custom" >
+          <template #default="scope">
+            <ElTag type="info" v-if="scope.row.status == 'inactive'">Inactive</ElTag>
+            <ElTag type="warning" v-if="scope.row.status == 'sellout'">Sellout</ElTag>
+            <ElTag type="success" v-if="scope.row.status == 'active'">Active</ElTag>
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="Action" :width="150">
           <template #default="scope">
             <el-button size="small" type="success" @click="openCreateTransactionDialog(scope.row, 'BUY')">
@@ -122,7 +134,7 @@
     <!-- Transaction Table -->
     <div>
       <ElTable stripe style="width: 100" :data="transactions" :default-sort="{prop: 'trading_date', order:'descending'}"
-        @sort-change="onTransactionTableSortChange">
+        @sort-change="onTransactionTableSortChange" :show-summary="true" :summary-method="getSummaries">
         <ElTableColumn prop="channel_name" label="Channel " :width="120" />
         <ElTableColumn prop="ticker" label="Ticker" :width="120" />
         <ElTableColumn prop="trading_date" label="Tradind Date" sortable="custom" />
@@ -171,7 +183,7 @@
         </ElTableColumn>
       </ElTable>
       <div class="flex justify-center my-2">
-        <ElPagination background layout="prev, pager, next" :total="totalTransactions" :page-size="9"
+        <ElPagination background layout="prev, pager, next" :total="totalTransactionRows" :page-size="9"
           @change="onTransactionTablePageChange" />
       </div>
     </div>
@@ -181,7 +193,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { h, onMounted, ref, VNode } from "vue";
 import {
   AccountInfoDto,
   AccountSelectDto,
@@ -203,14 +215,13 @@ import {
   UploadProps,
   UploadRawFile,
   genFileId,
+  ElTag,
+  TableColumnCtx,
 } from "element-plus";
 import { ajax, stockAjax } from "@/libs/ajax";
 import AddNewInvestmentDialog from "./modals/AddNewInvestmentDialog.vue";
 import { InvestmentRow } from "@/models/stock/InvestmentModels";
 import TransactionRow from "@/models/stock/TransactionModels";
-import AddNewTransactionDialog from "./modals/CreateTransactionDialog.vue";
-import moment from "moment";
-import { pa } from "element-plus/es/locale";
 import CreateTransactionDialog from "./modals/CreateTransactionDialog.vue";
 import { SERVER_STOCK_TRACKER_URL } from "@/libs/url";
 
@@ -235,7 +246,7 @@ const onSelectAccountChange = ()=>{
 }
 
 const getAllAccount = () => {
-  stockAjax.get<AccountSelectDto[]>("/accounts?owner=vanson").then((res) => {
+  stockAjax.get<AccountSelectDto[]>("/accounts?owner=wmvcua").then((res) => {
     res.data.forEach((a) => {
       accountList.value.push(a);
       
@@ -246,14 +257,16 @@ const getAllAccount = () => {
 };
 
 const getAccountInfoByIds = () => {
-  var url = `/account-info?`;
-  if (selectedAccountIds.value.length > 0){
-    selectedAccountIds.value.forEach(id=>{
-      url += `ids=${id}&`
-    })
-  }
-  stockAjax.get<AccountInfoDto[]>(url).then((res) => {
+  stockAjax.get<AccountInfoDto[]>("/account-overview", {
+    params: {
+      ids: selectedAccountIds.value,
+    },
+    paramsSerializer: {
+      indexes: null
+    }
+  }).then((res) => {
     accountInfos.value = res.data;
+    console.log(accountInfos.value)
   }).catch(()=>{
     ElAlert.error({
       title: "Error",
@@ -308,7 +321,6 @@ const onUploadTcbsTransactionSuccess = () => {
 }
 
 const onUploadTbcsTransactionError = (err : Error) => {
-  debugger
   ElMessage({
     type: 'error',
     message: err.message,
@@ -323,7 +335,7 @@ const currentInvestment = ref<InvestmentRow>();
 let currentInvestmentPage = 1;
 const totalInvestments = ref<number>(0);
 let investmentSortProp = 'status'
-let investmentSortMode = 'descending'
+let investmentSortMode = 'ascending'
 const investmentTableRef = ref<InstanceType<typeof ElTable>>()
 
 
@@ -355,17 +367,23 @@ const getInvestmentPaging = () =>{
     page_size: 6
   }
   stockAjax.get("/investments",{
-    params: queryParams
-  }).then(res=>{
+    params: queryParams,
+    paramsSerializer: {
+      indexes: null, 
+    }
+  },).then(res=>{
     investments.value = res.data.investments
     totalInvestments.value = res.data.total_items
   }).catch(err=>{
-    console.log(err.response.data)
+    ElMessage({
+      message: err.response.data.error,
+      type: "error"
+    })
   })
 }
 
 const getLatestInvesment = (investmentId: number) => {
-  var url = `investment/${investmentId}`
+  var url = `/investment/${investmentId}`
   stockAjax.get<InvestmentRow>(url).then(res=>{
     var newestInvestment = res.data
     if (currentInvestment.value){
@@ -399,7 +417,11 @@ const clearSelectInvestment = () => {
 // ========================================= TRANSACTIONS ==================================================
 const transactions = ref<TransactionRow[]>([])
 // transaction table properties
-const totalTransactions = ref<number>(0);
+const totalTransactionRows = ref<number>(0);
+let sumMatchValue = 0;
+let sumFee = 0;
+let sumTax = 0; 
+let sumReturnValue = 0;
 let currentTransactionPage = 1;
 let transactionOrderBy = 'trading_date'
 let transactionOrderType = 'descending'
@@ -423,7 +445,11 @@ const getTransactionPaging = (acc_id?: number) =>{
   }
   ).then(res=>{
     transactions.value =  res.data.transactions
-    totalTransactions.value = res.data.total
+    totalTransactionRows.value = res.data.total
+    sumMatchValue = res.data.sum_match_value
+    sumFee = res.data.sum_fee
+    sumTax = res.data.sum_tax
+    sumReturnValue = res.data.sum_return
   })
 }
 
@@ -439,7 +465,6 @@ const onTransactionTableSortChange = (data: {column: any, prop: string, order: a
 }
 
 const openCreateTransactionDialog = (row: InvestmentRow, trade: string) =>{
-  //console.log(row.account_id)
   addNewTransactionDialogVisible.value = true 
   tradingMode.value = trade
   
@@ -452,6 +477,35 @@ const onCloseCreatingTransactionDialog = (tx: TransactionRow) => {
     getLatestAccountInfo(currentInvestment.value!.account_id)
     getTransactionPaging(currentInvestment.value?.account_id)
   }
+}
+
+interface SummaryMethodProps<T = TransactionRow> {
+  columns: TableColumnCtx<T>[]
+  data: T[]
+}
+
+const getSummaries = (param: SummaryMethodProps) => {
+  const { columns } = param
+  
+  const sums: (string | VNode)[] = []
+  columns.forEach((column, index) => {
+    if (index === 0) {
+      sums[index] = h('div', { style: { textDecoration: 'underline' } }, [
+        'Total',
+      ])
+      return
+    }
+    if (index <= 5 || index == 9 || index == 10){
+      sums[index] = ''
+    }else {
+      sums[6] = (sumMatchValue / 1000).toString()
+      sums[7] = (sumFee / 1000).toString()
+      sums[8] = (sumTax / 1000).toString()
+      sums[11] = (sumReturnValue / 1000).toString()
+    }
+  })
+
+  return sums
 }
 
 

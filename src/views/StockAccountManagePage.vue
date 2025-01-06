@@ -43,7 +43,7 @@ onMounted(()=>{
 })
 
 const getAccountsPaging =  () =>{
-    stockAjax.get<GetAccountPagingDto[]>(`/account-search?owner=vanson`).then(res=>{
+    stockAjax.get<GetAccountPagingDto[]>(`/account-search?owner=wmvcua`).then(res=>{
         res.data.forEach(a=>{
             a.balance = a.balance/1000
             a.deposit = a.deposit/1000

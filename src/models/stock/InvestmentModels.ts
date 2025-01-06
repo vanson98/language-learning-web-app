@@ -23,4 +23,5 @@ export interface InvestmentRow {
   sell_volume: number;
   status: string;
   tax: number;
+  profit: number;
 }

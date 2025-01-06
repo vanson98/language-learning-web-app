@@ -34,7 +34,7 @@ const props = defineProps<{
 const model = ref<CreateAccountDto>({
     channel_name: "",
     currency: "VND",
-    owner: "vanson"
+    owner: "wmvcua"
 })
 
 const emit = defineEmits({
