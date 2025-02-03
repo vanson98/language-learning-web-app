@@ -17,7 +17,7 @@
             </div>
             <div>
                 <label>Market Price</label>
-                <ElInput v-model="model.market_price" type="number" placeholder="Market Price"></ElInput>
+                <ElInput v-model="model.market_price" type="number" placeholder="/1000"></ElInput>
             </div>
             <div>
                 <label>Description</label>
@@ -61,8 +61,7 @@ const closeDialog = (investment: InvestmentRow | null) =>{
 }
 
 const save = () =>{
-   
-        model.value.market_price = Number(model.value.market_price)
+        model.value.market_price = Number(model.value.market_price) * 1000
         var bodyData = JSON.stringify(model.value)
         stockAjax.post<InvestmentRow>("/investment",bodyData).then(res =>{
             ElMessage({

@@ -59,6 +59,7 @@
       <div class="flex-grow"></div>
       <div>
         <ElButton @click="clearSelectInvestment()">Clear Select</ElButton>
+        <ElButton @click="openUpdateMarketPriceDialog()">Update Market Price</ElButton>
         <ElButton @click="()=>addNewInvestmentDialogVisible=true">Add New Investment</ElButton>
       </div>
     </div>
@@ -92,16 +93,6 @@
           </template>
         </ElTableColumn>
         <ElTableColumn prop="sell_volume" label="Sell Volume" />
-        <!-- <ElTableColumn prop="fee" label="Fee">
-          <template #default="scope">
-            <span>{{ scope.row.fee / 1000 }}</span>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn prop="tax" label="Tax">
-          <template #default="scope">
-            <span>{{ scope.row.tax / 1000 }}</span>
-          </template>
-        </ElTableColumn> -->
         <ElTableColumn label="Profit" prop="profit" sortable="custom">
           <template #default="scope">
               <span v-if="scope.row.status == 'sellout'"> {{scope.row.profit }}%</span>
@@ -190,6 +181,7 @@
   </div>
   <AddNewInvestmentDialog :visible="addNewInvestmentDialogVisible" @onclose="onAddingInvestmentDialogClose" :accounts="accountList"/>
   <CreateTransactionDialog :is-visible="addNewTransactionDialogVisible" :investment-id="currentInvestment?.id" :trade="tradingMode" @close="onCloseCreatingTransactionDialog" />
+  <UpdateMarketPriceDialog v-if="currentInvestment != null" :visible="updateMarketPriceDialogVisibility" :ticker="currentInvestment?.ticker" :investment-id="currentInvestment.id" @onclose="onUpdateMarketPriceDialogClose"/>
 </template>
 
 <script setup lang="ts">
@@ -224,9 +216,11 @@ import { InvestmentRow } from "@/models/stock/InvestmentModels";
 import TransactionRow from "@/models/stock/TransactionModels";
 import CreateTransactionDialog from "./modals/CreateTransactionDialog.vue";
 import { SERVER_STOCK_TRACKER_URL } from "@/libs/url";
+import UpdateMarketPriceDialog from "./modals/UpdateMarketPriceDialog.vue";
 
 const addNewInvestmentDialogVisible = ref<boolean>(false)
 const addNewTransactionDialogVisible = ref<boolean>(false)
+const updateMarketPriceDialogVisibility = ref<boolean>(false)
 
 // ========================================= COMPONENT EVENT ==================================================
 onMounted(() => {
@@ -248,8 +242,7 @@ const onSelectAccountChange = ()=>{
 const getAllAccount = () => {
   stockAjax.get<AccountSelectDto[]>("/accounts?owner=wmvcua").then((res) => {
     res.data.forEach((a) => {
-      accountList.value.push(a);
-      
+      accountList.value.push(a); 
     });
     selectedAccountIds.value.push(accountList.value[0].id);
     onSelectAccountChange()
@@ -268,10 +261,9 @@ const getAccountInfoByIds = () => {
     accountInfos.value = res.data;
     console.log(accountInfos.value)
   }).catch(()=>{
-    ElAlert.error({
-      title: "Error",
+    ElMessage({
+      type: "error",
       message: "Cannot fetch account information",
-      showClose: true,
     });
   });
 };
@@ -279,7 +271,7 @@ const getAccountInfoByIds = () => {
 
 
 const getLatestAccountInfo = (accId: number) =>{
-  var url = `/account-info`
+  var url = `/account-overview`
   stockAjax.get<AccountInfoDto[]>(url,{
     params: {
       ids: accId
@@ -293,10 +285,9 @@ const getLatestAccountInfo = (accId: number) =>{
       updateAccountInfo.total_cogs = accountInfo.total_cogs
     }
   }).catch(err=>{
-    ElAlert.error({
-      title: "Error",
+    ElMessage({
+      type: "error",
       message: err.response.data.error,
-      showClose: true,
     });
   })
 }
@@ -382,8 +373,8 @@ const getInvestmentPaging = () =>{
   })
 }
 
-const getLatestInvesment = (investmentId: number) => {
-  var url = `/investment/${investmentId}`
+const getLatestInvesmentOverview = (investmentId: number) => {
+  var url = `/investment-overview/${investmentId}`
   stockAjax.get<InvestmentRow>(url).then(res=>{
     var newestInvestment = res.data
     if (currentInvestment.value){
@@ -397,6 +388,8 @@ const getLatestInvesment = (investmentId: number) => {
       currentInvestment.value.fee = newestInvestment.fee
       currentInvestment.value.tax = newestInvestment.tax
       currentInvestment.value.status = newestInvestment.status
+      currentInvestment.value.profit = newestInvestment.profit
+      currentInvestment.value.profit = newestInvestment.profit
     }
   }).catch(err=>{
     console.log(err.response.data)
@@ -412,6 +405,23 @@ const clearSelectInvestment = () => {
   investmentTableRef.value!.setCurrentRow(undefined)
   searchText.value = ""
   getTransactionPaging()
+}
+
+const openUpdateMarketPriceDialog = () => {
+  if (!currentInvestment.value){
+    ElMessage({
+      type: "error",
+      message: "Please select an investment",
+    })
+    return
+  }
+  updateMarketPriceDialogVisibility.value = true
+}
+const onUpdateMarketPriceDialogClose = (result: {id: number, market_price: number} | null) => { 
+  updateMarketPriceDialogVisibility.value = false
+  if (result != null && result.id == currentInvestment.value?.id){
+    getLatestInvesmentOverview(result.id)
+  }
 }
 
 // ========================================= TRANSACTIONS ==================================================
@@ -473,7 +483,7 @@ const openCreateTransactionDialog = (row: InvestmentRow, trade: string) =>{
 const onCloseCreatingTransactionDialog = (tx: TransactionRow) => {
   addNewTransactionDialogVisible.value = false
   if(tx != null){
-    getLatestInvesment(tx.investment_id)
+    getLatestInvesmentOverview(tx.investment_id)
     getLatestAccountInfo(currentInvestment.value!.account_id)
     getTransactionPaging(currentInvestment.value?.account_id)
   }

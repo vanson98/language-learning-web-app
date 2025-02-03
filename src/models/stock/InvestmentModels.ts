@@ -25,3 +25,8 @@ export interface InvestmentRow {
   tax: number;
   profit: number;
 }
+
+export interface UpdateMarketPriceModel {
+  investment_id: number ;
+  market_price: number | null;
+}

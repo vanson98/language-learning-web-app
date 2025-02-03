@@ -6,15 +6,15 @@
         </div>
         <div class="mt-1">
             <label>Match price</label>
-            <ElInput v-model="model.match_price"></ElInput>
+            <ElInput v-model="model.match_price" placeholder="/1000"></ElInput>
         </div>
         <div class="mt-1">
             <label>Fee</label>
-            <ElInput v-model="model.fee"></ElInput>
+            <ElInput v-model="model.fee" placeholder="/1000"></ElInput>
         </div>
         <div class="mt-1">
             <label>Tax</label>
-            <ElInput v-model="model.tax"></ElInput>
+            <ElInput v-model="model.tax" placeholder="/1000"></ElInput>
         </div>
         <div class="grid grid-cols-2 gap-3 my-1">
             <div>
@@ -35,7 +35,6 @@
             <ElButton @click="() => onClose(null)">Cancel</ElButton>    
             <ElButton type="primary" @click="submit">Create</ElButton>
         </div>
-       
     </ElDialog>
 </template>
 
@@ -65,13 +64,15 @@ const emit = defineEmits(["close"])
 
 const submit = () =>{
     if(props.investmentId != null){
-        model.value.investment_id = props.investmentId
-        model.value.trade = props.trade
-        model.value.match_price = Number(model.value.match_price)
-        model.value.match_volume = Number(model.value.match_volume)
-        model.value.fee = Number(model.value.fee)
-        model.value.tax = Number(model.value.tax)
-        stockAjax.post<TransactionRow>("/transactions",JSON.stringify(model.value)).then(res=>{
+        var transaction :CreateNewTransactionModel = {}
+        Object.assign(transaction, model.value);
+        transaction.investment_id = props.investmentId
+        transaction.trade = props.trade
+        transaction.match_price = Number(model.value.match_price) * 1000
+        transaction.match_volume = Number(model.value.match_volume) 
+        transaction.fee = Number(model.value.fee) * 1000
+        transaction.tax = Number(model.value.tax) * 1000
+        stockAjax.post<TransactionRow>("/transactions",JSON.stringify(transaction)).then(res=>{
             ElMessage({
                 message: "Add new transaction successful",
                 type: "success"

@@ -1,6 +1,7 @@
 
 import axios from "axios";
 import AppConsts from "./appconst";
+import router from "@/router";
 const ajax = axios.create({
   baseURL: AppConsts.remoteServerBaseUrl,
   timeout: 300000,
@@ -14,31 +15,33 @@ const crawAjax = axios.create({
 })
 
 const stockAjax = axios.create({
-  baseURL: AppConsts.remoteStockTrackerServerUrl
+  baseURL: AppConsts.remoteStockTrackerServerUrl,
+  withCredentials: true
 })
 
-// ajax.interceptors.response.use(response =>{
-//   return Promise.resolve(response)
-// },error =>{
-//   debugger
-//   var bypassAuthenPath = ["/login","/refresh-token"]
+const identityAjax = axios.create({
+  baseURL: AppConsts.remoteIdentityServerUrl,
+  withCredentials: true
+})
 
-//   return Promise.reject(error.response)
+ajax.interceptors.response.use(response =>{
+  return Promise.resolve(response)
+},error =>{
+  if(error.response && error.response.status == 401){
+    alert("User session expired. Pls login again")
+    router.push("/login")
+  } 
+  return Promise.reject(error.response)
+})
 
-//   // if(error.response != null && error.response.status == 401 && !bypassAuthenPath.includes(error.config.url)){
-//   //   requestNewToken()
-//   // }
-//   // else{
-//   //   return Promise.reject(error)
-//   // }
-// })
+stockAjax.interceptors.response.use(response =>{
+  return Promise.resolve(response)
+},error =>{
+  if(error.response && error.response.status == 401){
+    alert("User session expired. Pls login again")
+    router.push("/login")
+  } 
+  return Promise.reject(error.response)
+})
 
-const requestNewToken = ()=>{
-  ajax.post("/refresh-token").then(response=>{
-    console.log("token refresh");
-  }).catch(err=>{
-    document.location.pathname = "/login"
-  })
-}
-
-export { ajax,crawAjax, stockAjax};
+export { ajax,crawAjax, stockAjax, identityAjax};

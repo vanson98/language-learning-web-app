@@ -4,6 +4,9 @@ import PhraseManager from "@/views/PhraseManager.vue"
 import StockManagePage from "@/views/StockManagePage.vue"
 import LanguageLearningPage from "@/views/LanguageLearningPage.vue"
 import StockAccountManagePage from "@/views/StockAccountManagePage.vue"
+import IdentityCallBack from "@/views/authen/IdentityCallBack.vue"
+import { ajax, identityAjax } from "@/libs/ajax"
+import { AxiosError } from "axios"
 
 
 const routes: Array<RouteRecordRaw> = [
@@ -16,24 +19,41 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import("../views/authen/Login.vue")
     },
     {
+        path: "/authen-callback/:exchangeCode",
+        name: "authen-callback",
+        component: IdentityCallBack
+    },
+    {
         path: "/",
         name: "home",
         component: Home,
+        meta: {
+            requiresAuthen: true
+        }
     },
     {
         path: "/stock-manager",
         name: "stock-manager",
         component: StockManagePage,
+        meta: {
+            requiresAuthen: true
+        }
     },
     {
         path: "/stock-accounts-manager",
         name: "stock-accounts-manager",
         component: StockAccountManagePage,
+        meta: {
+            requiresAuthen: true
+        }
     },
     {
         path: "/language-learning",
         name: "lang-learning",
-        component: LanguageLearningPage
+        component: LanguageLearningPage,
+        meta: {
+            requiresAuthen: true
+        }
     }
 ]
 
@@ -41,31 +61,19 @@ const router = createRouter({
     history: createWebHistory(process.env.BASE_URL),
     routes
 })
-// router.beforeEach((to,from, next)=>{
-//     var exceptAuthenPathName = ["/login","/register","/logout"]
-//     if(exceptAuthenPathName.includes(to.path)){
-//         next()
-//     }
-//     else{
-//         // check do have token
-//         var token = getCookieByName("token")
-//         if(token == null || token == ""){
-//             next({name: "login"})
-//         }
-//         else{
-//             next()
-//         }
-//         next()
-//     }
-// })
 
-const getCookieByName = (name : string) : string | undefined =>{
-    debugger
-    const value = `; ${document.cookie}`
-    const parts = value.split(`; ${name}=`)
-    if(parts.length === 2){
-        return parts?.pop()?.split(";").shift();
-    } 
-    return undefined
-}
+router.beforeEach((to,from, next)=>{
+    if (to.meta.requiresAuthen){
+        identityAjax.get("/token-cookie-verification").then(res=>{
+            if(res.status == 200 ){
+                next()
+            }
+        }).catch((err: AxiosError)=> {
+            next("/login")
+        })
+    }else{
+        next()
+    }
+})
+
 export default router

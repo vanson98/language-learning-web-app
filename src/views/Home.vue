@@ -9,14 +9,21 @@
                 </ElMenu>
             </ElHeader>
             <ElMain>
-                Wellcom to new version of yourself
+                BELIEVE IN YOURSELF - {{ userStore.user?.Username }}
             </ElMain>
         </ElContainer>
     </div>
 </template>
 <script setup lang="ts">
 import router from '@/router';
+import { useUserInfoStore } from '@/store/UserStore';
 import { ElContainer, ElHeader, ElMain, ElMenu, ElMenuItem } from 'element-plus';
+import { onMounted } from 'vue';
+const userStore = useUserInfoStore();
+
+onMounted(()=>{
+    userStore.fetchUserInfo()
+})
 
 const goToLearningLanguagePage = () =>{
     router.push("/language-learning")

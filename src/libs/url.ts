@@ -13,4 +13,9 @@ const SERVER_STOCK_TRACKER_URL =
   ? "http://localhost:5050"
   : "http://localhost:5051"
 
-export {SERVER_BASE_URL,SERVER_CRAW_DATA_URL, SERVER_STOCK_TRACKER_URL};
+const SERVER_IDENTITY_URL = 
+  process.env.NODE_ENV == "production"
+  ? "http://localhost:9090"
+  : "http://localhost:9091"
+
+export {SERVER_BASE_URL,SERVER_CRAW_DATA_URL, SERVER_STOCK_TRACKER_URL, SERVER_IDENTITY_URL};
