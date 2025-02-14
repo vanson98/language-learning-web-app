@@ -6,7 +6,6 @@ import { identityAjax } from '@/libs/ajax';
 import router from '@/router';
 import { onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
-import Cookies from 'js-cookie';
 import { ElMessage } from 'element-plus';
 import { useUserInfoStore } from '@/store/UserStore';
 const route = useRoute();
@@ -19,8 +18,6 @@ onMounted(() =>{
         withCredentials: true // The browser blocks cross-site cookies unless credentials are included`
     }).then((res)=>{
         if (res.status == 200) {
-            //userStore.fetchUserInfo()
-            //console.log("This is user state", userStore.user)
             router.push("/")
         }
     }).catch(res =>{

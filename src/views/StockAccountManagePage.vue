@@ -23,34 +23,42 @@
             </ElTable>
         </div>
     </div>
-    <CreateAccountDialog :visible="createAccountDialogVisible" @onclose="onCreateAccountDialogClose"/>
+    <CreateAccountDialog 
+    :visible="createAccountDialogVisible" 
+    @onclose="onCreateAccountDialogClose" 
+    :user-name="userStore.user?.Username"
+    :email="userStore.user?.Email" />
 </template>
 
 <script lang="ts" setup>
 import { stockAjax } from '@/libs/ajax';
-import AccountDto, { AccountTransferResult, GetAccountPagingDto } from '@/models/stock/AccountModels';
+import { AccountTransferResult, GetAccountPagingDto } from '@/models/stock/AccountModels';
 import { ElButton, ElInput, ElMessage, ElMessageBox, ElTable, ElTableColumn } from 'element-plus';
 import { onMounted, ref } from 'vue';
 import CreateAccountDialog from './modals/CreateAccountDialog.vue';
 import { RouterLink } from 'vue-router';
+import { useUserInfoStore } from '@/store/UserStore';
 const updateAmount = ref<number>()
 const accounts = ref<GetAccountPagingDto[]>()
 const createAccountDialogVisible = ref<boolean>(false)
 const currentAccount = ref<GetAccountPagingDto | null>()
-
+const userStore = useUserInfoStore()
+  
 onMounted(()=>{
     getAccountsPaging()
 })
 
 const getAccountsPaging =  () =>{
-    stockAjax.get<GetAccountPagingDto[]>(`/account-search?owner=wmvcua`).then(res=>{
+    var username = userStore.user?.Username
+    stockAjax.get<GetAccountPagingDto[]>(`/account-search?owner=${username}`).then(res=>{
+      if( res.data != null) {
         res.data.forEach(a=>{
             a.balance = a.balance/1000
             a.deposit = a.deposit/1000
             a.withdraw = a.withdraw/1000
         })
         accounts.value = res.data
-        
+      }
     })
 }
 
@@ -99,7 +107,7 @@ const depositMoney = () => {
         })
         .catch((err) => {
           ElMessage({
-            message: err.response.data.error,
+            message: err.data.error,
             type: "error",
           });
         });

@@ -23,18 +23,25 @@
 import { stockAjax } from '@/libs/ajax';
 import STTReponseErrorModel from '@/models/response/StockTrackerResponseModel';
 import { CreateAccountDto } from '@/models/stock/AccountModels';
-import AddNewInvestmnetModel, { InvestmentRow } from '@/models/stock/InvestmentModels';
+import { InvestmentRow } from '@/models/stock/InvestmentModels';
+import { useUserInfoStore } from '@/store/UserStore';
 import { AxiosError } from 'axios';
 import { ElButton, ElDialog, ElInput, ElMessage, ElText } from 'element-plus';
 import { ref } from 'vue';
 
 const props = defineProps<{
     visible: boolean
+    userName: string | undefined
+    email: string | undefined
 }>()
+
+
 const model = ref<CreateAccountDto>({
     channel_name: "",
     currency: "VND",
-    owner: "wmvcua"
+    username: "", 
+    email: ""
+
 })
 
 const emit = defineEmits({
@@ -47,6 +54,11 @@ const closeDialog = (investment: InvestmentRow | null) =>{
 }
 
 const save = () =>{
+    if (props.userName && props.email){
+
+    model.value.username = props.userName
+    model.value.email = props.email
+    }
     var bodyData = JSON.stringify(model.value)
     stockAjax.post<InvestmentRow>("/accounts",bodyData).then(res =>{
         ElMessage({
@@ -56,10 +68,10 @@ const save = () =>{
         model.value.channel_name = ""
         model.value.currency = "VND"
         closeDialog(res.data)
-    }).catch((err : AxiosError<STTReponseErrorModel>) => {
+    }).catch((err) => {
         ElMessage({
             type: 'error',
-            message: err.response?.data.error
+            message: err.data.error
         })
     })
 }
