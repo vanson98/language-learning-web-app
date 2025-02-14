@@ -18,4 +18,9 @@ const SERVER_IDENTITY_URL =
   ? "http://localhost:9090"
   : "http://localhost:9091"
 
-export {SERVER_BASE_URL,SERVER_CRAW_DATA_URL, SERVER_STOCK_TRACKER_URL, SERVER_IDENTITY_URL};
+const API_GATEWAY_URL = 
+  process.env.NODE_ENV == "production"
+  ? "http://localhost:6060"
+  : "http://localhost:6061"
+
+export {SERVER_BASE_URL,SERVER_CRAW_DATA_URL, SERVER_STOCK_TRACKER_URL, SERVER_IDENTITY_URL, API_GATEWAY_URL};

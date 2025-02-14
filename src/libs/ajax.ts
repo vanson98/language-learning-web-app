@@ -24,6 +24,11 @@ const identityAjax = axios.create({
   withCredentials: true
 })
 
+const gatewayAjax = axios.create({
+  baseURL: AppConsts.remoteGatewayServerUrl,
+  withCredentials: true
+})
+
 ajax.interceptors.response.use(response =>{
   return Promise.resolve(response)
 },error =>{
@@ -44,4 +49,4 @@ stockAjax.interceptors.response.use(response =>{
   return Promise.reject(error.response)
 })
 
-export { ajax,crawAjax, stockAjax, identityAjax};
+export { ajax,crawAjax, stockAjax, identityAjax, gatewayAjax};

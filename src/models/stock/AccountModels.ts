@@ -38,7 +38,8 @@ export interface AccountTransferResult{
 }
 
 export interface CreateAccountDto{
-    owner: string,
+    username: string,
+    email: string,
     channel_name: string,
     currency: string
 }

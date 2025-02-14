@@ -18,6 +18,22 @@ export default interface TransactionRow {
     status: string
 }
 
+export interface TransactionExcelRow {
+    account_id: number,
+    ticker: string,
+    trading_date: string,
+    trade: string, 
+    volume: number,
+    order_price: number,
+    match_volume: number,
+    match_price: number,
+    match_value: number, 
+    fee: number,
+    tax: number,
+    cost: number,
+    return: number,
+    status: string,
+}
 export interface CreateNewTransactionModel{
     investment_id: number,
     trading_date: Date,

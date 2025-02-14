@@ -64,7 +64,7 @@ const emit = defineEmits(["close"])
 
 const submit = () =>{
     if(props.investmentId != null){
-        var transaction :CreateNewTransactionModel = {}
+        var transaction : CreateNewTransactionModel = {}
         Object.assign(transaction, model.value);
         transaction.investment_id = props.investmentId
         transaction.trade = props.trade
@@ -72,7 +72,7 @@ const submit = () =>{
         transaction.match_volume = Number(model.value.match_volume) 
         transaction.fee = Number(model.value.fee) * 1000
         transaction.tax = Number(model.value.tax) * 1000
-        stockAjax.post<TransactionRow>("/transactions",JSON.stringify(transaction)).then(res=>{
+        stockAjax.post<TransactionRow>("/transaction",JSON.stringify(transaction)).then(res=>{
             ElMessage({
                 message: "Add new transaction successful",
                 type: "success"
