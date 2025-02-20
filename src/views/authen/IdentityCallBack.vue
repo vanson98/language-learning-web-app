@@ -28,8 +28,21 @@ onMounted(() =>{
     })
 })
 
-onUnmounted(() =>{
-   
 
-})
+// const generateCodeVerifier = () => {
+//     const array = new Uint8Array(32);
+//     window.crypto.getRandomValues(array);
+//     return base64URLEncode(array);
+// }
+
+// const generateCodeChallenge = (codeVerifier) => {
+//     const hash = sha256(codeVerifier);
+// }
+
+const base64URLEncode = (str: Uint8Array) => {
+    return btoa(String.fromCharCode.apply(null, Array.from(str)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+}
 </script>
