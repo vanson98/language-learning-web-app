@@ -33,6 +33,7 @@ export interface TransactionExcelRow {
     cost: number,
     return: number,
     status: string,
+    push_time: number | null
 }
 export interface CreateNewTransactionModel{
     investment_id: number,

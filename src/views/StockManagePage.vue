@@ -293,7 +293,6 @@ const getAccountInfoByIds = () => {
     }
   }).then((res) => {
     accountInfos.value = res.data;
-    console.log(accountInfos.value)
   }).catch(() => {
     ElMessage({
       type: "error",
@@ -330,7 +329,6 @@ var fileUpload: UploadRawFile | null = null
 
 const handleUploadFileChange = (file: UploadFile) => {
   fileUpload = file.raw ?? null
-  console.log(fileUpload)
 }
 
 const handleExceed: UploadProps['onExceed'] = (files) => {
@@ -372,22 +370,24 @@ const processUploadFile = () => {
             break;
           }
             var rowData : TransactionExcelRow = {
-            account_id: selectedAccountIds.value[0],
-            ticker: row[0],
-            trading_date: row[1],
-            trade: row[2] == "Mua" ? "BUY" : "SELL",
-            volume: row[3],
-            order_price: row[4],
-            match_volume: row[5],
-            match_price: row[6],
-            match_value: row[7],
-            fee: row[8],
-            tax: row[9],
-            cost: row[10],
-            return: row[11],
-            status: "COMPLETED",
-          }
-          transactions.push(rowData);
+              account_id: selectedAccountIds.value[0],
+              ticker: row[0],
+              trading_date: row[1],
+              trade: row[2] == "Mua" ? "BUY" : "SELL",
+              volume: row[3],
+              order_price: row[4],
+              match_volume: row[5],
+              match_price: row[6],
+              match_value: row[7],
+              fee: row[8],
+              tax: row[9],
+              cost: row[10],
+              return: row[11],
+              status: "COMPLETED",
+              push_time: null
+            }
+            transactions.push(rowData);
+          
         }
       }
       pushTransactionsToServer(transactions)
@@ -400,7 +400,9 @@ const pushTransactionsToServer = (transactions: TransactionExcelRow[]) => {
   var n = transactions.length
   for (let i = 1; i <= n; i++) {
     setTimeout(()=>{
-      gatewayAjax.post("/transaction", JSON.stringify(transactions[n-i]), {
+      var tx = transactions[n-i]
+      tx.push_time = Date.now()
+      gatewayAjax.post("/transaction", JSON.stringify(tx), {
           headers: {
             'Content-Type': 'application/json',
           }
@@ -415,7 +417,7 @@ const pushTransactionsToServer = (transactions: TransactionExcelRow[]) => {
             message: err.response ? err.response.data : err.message,
           });
         });
-    }, i * 500)
+    }, i * 200)
         
   }
 }
