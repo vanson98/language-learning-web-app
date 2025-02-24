@@ -19,6 +19,7 @@ export default interface TransactionRow {
 }
 
 export interface TransactionExcelRow {
+    tx_id: string,
     account_id: number,
     ticker: string,
     trading_date: string,
@@ -32,8 +33,9 @@ export interface TransactionExcelRow {
     tax: number,
     cost: number,
     return: number,
-    status: string,
-    push_time: number | null
+    upload_status: number,
+    push_time: number | null,
+    check_cost: boolean,
 }
 export interface CreateNewTransactionModel{
     investment_id: number,

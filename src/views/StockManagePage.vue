@@ -1,33 +1,13 @@
 <template>
   <div class="m-2">
-    <div class="flex justify-between">
+    <div class="flex justify-between mb-1">
       <ElSelect class="flex-none" placeholder="Chọn tài khoản" multiple v-model="selectedAccountIds"
         style="width: 350px" @change="onSelectAccountChange">
         <ElOption v-for="account in accountList" :key="account.id" :label="account.channel_name" :value="account.id">
         </ElOption>
       </ElSelect>
       <div>
-        <ElUpload ref="tcbsTransactionUploader" 
-          :action="`${SERVER_STOCK_TRACKER_URL}/tcbs-import`" 
-          :auto-upload="false"
-          :multiple="false" 
-          :accept="'.xlsx'" 
-          :limit="1" 
-          :name="'tcbs_transaction_export_data'" 
-          :with-credentials="true"
-          :data="{ account_id: selectedAccountIds[0] }" 
-          :on-exceed="handleExceed" 
-          :on-error="onUploadTbcsTransactionError"
-          :on-success="onUploadTcbsTransactionSuccess"
-          :on-change="handleUploadFileChange"
-          >
-          <template #trigger>
-            <el-button type="primary">Select TCBS file</el-button>
-          </template>
-          <el-button class="ml-3" type="success" @click="processUploadFile">
-            upload to server
-          </el-button>
-        </ElUpload>
+       <ElButton @click="uploadTransactionDialogVisible=true">Upload Transaction</ElButton>
       </div>
     </div>
     <!-- Account Overview -->
@@ -187,6 +167,7 @@
   <UpdateMarketPriceDialog v-if="currentInvestment != null" :visible="updateMarketPriceDialogVisibility"
     :ticker="currentInvestment?.ticker" :investment-id="currentInvestment.id"
     @onclose="onUpdateMarketPriceDialogClose" />
+  <UploadTransactionDialog :account-id="selectedAccountIds[0]" :visible="uploadTransactionDialogVisible" @onclose="onUploadTransctionDialogClose"></UploadTransactionDialog>
 </template>
 
 <script setup lang="ts">
@@ -201,20 +182,12 @@ import {
   ElSelect,
   ElInput,
   ElButton,
-  ElMessageBox,
   ElTable,
   ElTableColumn,
-  ElAlert,
   ElMessage,
   ElPagination,
-  ElUpload,
-  UploadInstance,
-  UploadProps,
-  UploadRawFile,
-  genFileId,
   ElTag,
   TableColumnCtx,
-  UploadFile,
 } from "element-plus";
 import { ajax, gatewayAjax, stockAjax } from "@/libs/ajax";
 import AddNewInvestmentDialog from "./modals/AddNewInvestmentDialog.vue";
@@ -223,8 +196,8 @@ import TransactionRow, { TransactionExcelRow } from "@/models/stock/TransactionM
 import CreateTransactionDialog from "./modals/CreateTransactionDialog.vue";
 import { SERVER_STOCK_TRACKER_URL } from "@/libs/url";
 import UpdateMarketPriceDialog from "./modals/UpdateMarketPriceDialog.vue";
+import UploadTransactionDialog from "./modals/UploadTransactionDialog.vue";
 import { useUserInfoStore } from "@/store/UserStore";
-import * as XLSX from 'xlsx';
 
 const addNewInvestmentDialogVisible = ref<boolean>(false)
 const addNewTransactionDialogVisible = ref<boolean>(false)
@@ -262,7 +235,7 @@ const setUpWebSocketConnect = () =>{
 const accountList = ref<AccountSelectDto[]>([]);
 const selectedAccountIds = ref<number[]>([]);
 const accountInfos = ref<AccountInfoDto[]>([]);
-const tcbsTransactionUploader = ref<UploadInstance>()
+const uploadTransactionDialogVisible = ref<boolean>(false)
 
 const onSelectAccountChange = () => {
   getAccountInfoByIds()
@@ -301,7 +274,6 @@ const getAccountInfoByIds = () => {
   });
 };
 
-
 const getLatestAccountInfo = (accId: number) => {
   var url = `/account-overview`
   stockAjax.get<AccountInfoDto[]>(url, {
@@ -324,118 +296,10 @@ const getLatestAccountInfo = (accId: number) => {
   })
 }
 
-var fileUpload: UploadRawFile | null = null
-
-
-const handleUploadFileChange = (file: UploadFile) => {
-  fileUpload = file.raw ?? null
+const onUploadTransctionDialogClose = () => {
+  uploadTransactionDialogVisible.value = false
 }
 
-const handleExceed: UploadProps['onExceed'] = (files) => {
-  tcbsTransactionUploader.value!.clearFiles()
-  const file = files[0] as UploadRawFile
-  file.uid = genFileId()
-  tcbsTransactionUploader.value!.handleStart(file)
-}
-
-const processUploadFile = () => {
-  if (fileUpload == null || selectedAccountIds.value.length == 0) {
-    ElMessage({
-      type: 'error',
-      message: 'Please select an account and a file to upload',
-    })
-    return
-  }
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const data = e.target?.result
-    if(data){
-      // read excel file
-      var workbook : XLSX.WorkBook = XLSX.read(data, {type: 'binary'});
-      // Process the workbook 
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      // Convert to json 
-      var transactions :TransactionExcelRow[] = [];
-      const ref = worksheet['!ref'];
-      if (ref) {
-        const endRow = ref ? parseInt(ref.split(':')[1]?.match(/\d+/)?.[0] ?? '0') : 0;
-        for (let i = 15; i < endRow; i++) {
-          const row = XLSX.utils.sheet_to_json(worksheet, {
-            header: 1,
-            range: i,
-            blankrows: true
-          })[0] as any[];
-          if (row.every(cell => cell === undefined || cell === null || cell === '')) {
-            break;
-          }
-            var rowData : TransactionExcelRow = {
-              account_id: selectedAccountIds.value[0],
-              ticker: row[0],
-              trading_date: row[1],
-              trade: row[2] == "Mua" ? "BUY" : "SELL",
-              volume: row[3],
-              order_price: row[4],
-              match_volume: row[5],
-              match_price: row[6],
-              match_value: row[7],
-              fee: row[8],
-              tax: row[9],
-              cost: row[10],
-              return: row[11],
-              status: "COMPLETED",
-              push_time: null
-            }
-            transactions.push(rowData);
-          
-        }
-      }
-      pushTransactionsToServer(transactions)
-    }
-  }
-  reader.readAsArrayBuffer(fileUpload)
-}
-
-const pushTransactionsToServer = (transactions: TransactionExcelRow[]) => {
-  var n = transactions.length
-  for (let i = 1; i <= n; i++) {
-    setTimeout(()=>{
-      var tx = transactions[n-i]
-      tx.push_time = Date.now()
-      gatewayAjax.post("/transaction", JSON.stringify(tx), {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }).then(res => {
-          ElMessage({
-            type: 'success',
-            message: res.data,
-          });
-        }).catch(err => {
-          ElMessage({
-            type: 'error',
-            message: err.response ? err.response.data : err.message,
-          });
-        });
-    }, i * 200)
-        
-  }
-}
-
-const onUploadTcbsTransactionSuccess = () => {
-  ElMessage({
-    type: 'success',
-    message: 'import tbcs transaction successful',
-  })
-  onSelectAccountChange()
-}
-
-const onUploadTbcsTransactionError = (err: Error) => {
-  ElMessage({
-    type: 'error',
-    message: err.message,
-  })
-}
 
 // ========================================= INVESTMENTS ==================================================
 const searchText = ref<string>("");
