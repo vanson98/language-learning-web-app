@@ -36,7 +36,7 @@
                     </ElTableColumn>
                     <ElTableColumn label="Action">
                         <template #default="scope">
-                            <div class="d-flex"  v-if="scope.row.upload_status==2">
+                            <div class="d-flex"  v-if="scope.row.upload_status==3">
                                 <ElButton type="success" size="small">PCC</ElButton>
                                 <ElButton type="warning" size="small">PNC</ElButton>
                             </div>
@@ -69,17 +69,19 @@ import {
     ElTable,
     ElTag,
 } from "element-plus";
-import { ref } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 import { TransactionExcelRow } from "@/models/stock/TransactionModels";
 
 const props = defineProps<{
     visible: boolean;
     accountId: number;
 }>();
+
 const model = ref<UpdateMarketPriceModel>({
     investment_id: 0,
     market_price: null,
 });
+
 
 const emit = defineEmits({
     onclose: (result: { id: number; market_price: number } | null) => { },
@@ -89,13 +91,52 @@ const closeDialog = () => {
     emit("onclose", null);
 };
 
+watch(() => props.visible, (val)=> {
+    if(val){
+        establishWebSocketConnection()
+    }else{
+        closeWebSocketConnection()
+    }
+})
+
+let socket: WebSocket;
+
+const establishWebSocketConnection = () =>{
+    socket = new WebSocket("ws://localhost:6061/ws")
+    socket.onopen = () =>{
+        console.log("Successfully Connected")
+        socket.send("Hi From the Client!")
+    }
+
+    socket.onmessage = (event) =>{
+        console.log("Received from server:", event.data);
+    }
+    // Handle connection close
+    socket.onclose = function(event) {
+        console.log("Disconnected from WebSocket server");
+    };
+
+    // Handle errors
+    socket.onerror = function(error) {
+        console.error("WebSocket error:", error);
+    };
+}
+
+const closeWebSocketConnection = () =>{
+    if(socket != undefined && (socket.readyState == 1 || socket?.readyState == 0)){
+        socket.close();
+    }
+}
+
+// ===================================== HANDLE UPLOAD FILE =====================================
+
 const tcbsTransactionUploader = ref<UploadInstance>();
 const transactionExcelRows = ref<TransactionExcelRow[]>([]);
 var fileUpload: UploadRawFile | null = null;
 
 const handleUploadFileChange = (file: UploadFile) => {
     fileUpload = file.raw ?? null;
-    extractTransactionData()
+    readFileData()
 };
 
 const handleExceed: UploadProps["onExceed"] = (files) => {
@@ -105,7 +146,7 @@ const handleExceed: UploadProps["onExceed"] = (files) => {
     tcbsTransactionUploader.value!.handleStart(file);
 };
 
-const extractTransactionData = () => {
+const readFileData = () => {
     if (fileUpload == null) {
         ElMessage({
             type: "error",
@@ -124,7 +165,6 @@ const extractTransactionData = () => {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             // Convert to json
-
             const ref = worksheet["!ref"];
             if (ref) {
                 const endRow = ref
@@ -192,7 +232,10 @@ const pushTransactionsToServer = () => {
                     })
                     .then((res) => {
                         transaction.upload_status = 1
-                        
+                        ElMessage({
+                            type: "success",
+                            message: res.data,
+                        });
                     })
                     .catch((err) => {
                         ElMessage({

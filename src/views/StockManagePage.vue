@@ -206,30 +206,7 @@ const userStore = useUserInfoStore()
 // ========================================= COMPONENT EVENT ==================================================
 onMounted(() => {
   getAllAccount();
-  setUpWebSocketConnect();
 });
-
-const setUpWebSocketConnect = () =>{
-  let socket = new WebSocket("ws://localhost:6061/ws");
-  console.log("Attemting Connection ....")
-  socket.onopen = () =>{
-    console.log("Successfully Connected")
-    socket.send("Hi From the Client!")
-  }
-
-  socket.onmessage = (event) =>{
-    console.log("Received from server:", event.data);
-  }
-  // Handle connection close
-  socket.onclose = function(event) {
-			console.log("Disconnected from WebSocket server");
-		};
-
-  // Handle errors
-  socket.onerror = function(error) {
-    console.error("WebSocket error:", error);
-  };
-}
 
 // ========================================= ACCOUNTS ==================================================
 const accountList = ref<AccountSelectDto[]>([]);
